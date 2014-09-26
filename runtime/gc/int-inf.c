@@ -284,7 +284,7 @@ objptr IntInf_notb (objptr arg, size_t bytes) {
 
 static objptr shary (objptr arg, Word32_t shift, size_t bytes,
                      void(*shop)(__mpz_struct *resmpz,
-                                 gmp_const __mpz_struct *argspace,
+                                 const __mpz_struct *argspace,
                                  unsigned long shift))
 {
   __mpz_struct argmpz, resmpz;
