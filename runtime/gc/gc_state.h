@@ -13,45 +13,45 @@ struct GC_state {
    * referenced, and having them at smaller offsets may decrease code
    * size and improve cache performance.
    */
-  pointer frontier; /* start <= frontier < limit */
-  pointer limit; /* limit = heap->start + heap->size */
-  pointer stackTop; /* Top of stack in current thread. */
-  pointer stackLimit; /* stackBottom + stackSize - maxFrameSize */
-  pointer localHeapStart;
-  pointer sharedHeapStart;
-  pointer sharedHeapEnd;
-  pointer sessionStart;
-  struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
+  pointer frontier; /* start <= frontier < limit *///local
+  pointer limit; /* limit = heap->start + heap->size *///local
+  pointer stackTop; /* Top of stack in current thread. *///local
+  pointer stackLimit; /* stackBottom + stackSize - maxFrameSize *///local
+  pointer localHeapStart;//local
+  pointer sharedHeapStart;//local
+  pointer sharedHeapEnd;//local
+  pointer sessionStart;//Global
+  struct GC_generationalMaps generationalMaps; /* generational maps for this heap *///local
 
   /* ML arrays and queues */
-  SchedulerQueue* schedulerQueue;
-  Lock* schedulerLocks;
+  SchedulerQueue* schedulerQueue;//local
+  Lock* schedulerLocks;//local
 
-  objptr* moveOnWBA;
-  int32_t moveOnWBASize;
-  int32_t moveOnWBAMaxSize;
+  objptr* moveOnWBA;//local
+  int32_t moveOnWBASize;//local
+  int32_t moveOnWBAMaxSize;//local
 
-  PreemptThread* preemptOnWBA;
-  int32_t preemptOnWBASize;
-  int32_t preemptOnWBAMaxSize;
+  PreemptThread* preemptOnWBA;//local
+  int32_t preemptOnWBASize;//local
+  int32_t preemptOnWBAMaxSize;//local
 
-  objptr* danglingStackList;
-  int32_t danglingStackListSize;
-  int32_t danglingStackListMaxSize;
+  objptr* danglingStackList;//local
+  int32_t danglingStackListSize;//local
+  int32_t danglingStackListMaxSize;//local
 
-  SpawnThread* spawnOnWBA;
-  int32_t spawnOnWBASize;
-  int32_t spawnOnWBAMaxSize;
+  SpawnThread* spawnOnWBA;//local
+  int32_t spawnOnWBASize;//local
+  int32_t spawnOnWBAMaxSize;//local
 
-  pointer sharedFrontier;
-  pointer sharedLimit;
-  bool tmpBool;
-  pointer tmpPointer;
-  int32_t tmpInt;
-  size_t exnStack;
+  pointer sharedFrontier;//Global
+  pointer sharedLimit;//Global
+  bool tmpBool;//local
+  pointer tmpPointer;//local
+  int32_t tmpInt;//local
+  size_t exnStack;//local
 
   /* Alphabetized fields follow. */
-  size_t alignment; /* */
+  size_t alignment; /* *///local
   bool amInGC;
   bool amOriginal;
   uint32_t procId;
