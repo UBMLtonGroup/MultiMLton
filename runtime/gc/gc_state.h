@@ -90,58 +90,58 @@ struct GC_state {
   bool mutatorMarksCards;
   bool selectiveDebug;
   /* For PCML */
-  pthread_t pthread;
-  int32_t timeInterval; /* In milliseconds */
-  bool enableTimer;
+  pthread_t pthread;//local
+  int32_t timeInterval; /* In milliseconds *///local
+  bool enableTimer;//local
   /* The maximum amount of concurrency */
-  int32_t numberOfProcs;
+  int32_t numberOfProcs;//local
   /* For I/O threads */
-  int32_t numIOThreads;
-  GC_objectHashTable objectHashTable;
-  GC_objectType objectTypes; /* Array of object types. */
-  uint32_t objectTypesLength; /* Cardinality of objectTypes array. */
+  int32_t numIOThreads;//local
+  GC_objectHashTable objectHashTable;//local
+  GC_objectType objectTypes; /* Array of object types. *///local
+  uint32_t objectTypesLength; /* Cardinality of objectTypes array. *///local
   /* States for each processor */
-  GC_state procStates;
-  struct GC_profiling profiling;
-  GC_frameIndex (*returnAddressToFrameIndex) (GC_returnAddress ra);
-  uint32_t returnToC;
+  GC_state procStates;//global
+  struct GC_profiling profiling;//local
+  GC_frameIndex (*returnAddressToFrameIndex) (GC_returnAddress ra);//local
+  uint32_t returnToC;//local
   /* Roots that may be, for example, on the C call stack */
-  objptr *roots;
-  uint32_t rootsLength;
+  objptr *roots;//local
+  uint32_t rootsLength;//local
   objptr savedThread; /* Result of GC_copyCurrentThread.
                        * Thread interrupted by arrival of signal.
-                       */
-  objptr savedClosure; /* This is used for switching to a new thread */
-  objptr pacmlThreadId; /* ThreadId of the current pacml thread */
-  int (*saveGlobals)(FILE *f); /* saves the globals to the file. */
-  bool saveWorldStatus; /* */
-  struct GC_heap *secondaryLocalHeap; /* Used for major copying collection. */
-  struct GC_heap *sharedHeap; /* Used as a uncollected shared heap for testing lwtgc */
-  struct GC_heap *secondarySharedHeap; /* Used for major copying collection on shared heap */
-  objptr signalHandlerThread; /* Handler for signals (in heap). */
-  struct GC_signalsInfo signalsInfo;
-  struct GC_sourceMaps sourceMaps;
-  pointer stackBottom; /* Bottom of stack in current thread. */
-  uintmax_t startTime; /* The time when GC_init or GC_loadWorld was called. */
-  int32_t copiedSize;
-  int32_t syncReason;
-  struct GC_sysvals sysvals;
-  struct GC_translateState translateState;
-  struct GC_vectorInit *vectorInits;
-  uint32_t vectorInitsLength;
-  UT_array* reachable;
-  CopyObjectMap* copyObjectMap;
-  bool copyImmutable;
-  GC_weak weaks; /* Linked list of (live) weak pointers */
-  char *worldFile;
-  UT_array* directCloXferArray; /* Array to store closures directly transferred to this core */
+                       *///local
+  objptr savedClosure; /* This is used for switching to a new thread *///local
+  objptr pacmlThreadId; /* ThreadId of the current pacml thread *///local
+  int (*saveGlobals)(FILE *f); /* saves the globals to the file. *///local
+  bool saveWorldStatus; /* *///local
+  struct GC_heap *secondaryLocalHeap; /* Used for major copying collection. *///local
+  struct GC_heap *sharedHeap; /* Used as a uncollected shared heap for testing lwtgc *///global
+  struct GC_heap *secondarySharedHeap; /* Used for major copying collection on shared heap *///global
+  objptr signalHandlerThread; /* Handler for signals (in heap). *///local
+  struct GC_signalsInfo signalsInfo;//local
+  struct GC_sourceMaps sourceMaps;//local
+  pointer stackBottom; /* Bottom of stack in current thread. *///local
+  uintmax_t startTime; /* The time when GC_init or GC_loadWorld was called. *///local
+  int32_t copiedSize;//local
+  int32_t syncReason;//local
+  struct GC_sysvals sysvals;//local
+  struct GC_translateState translateState;//local
+  struct GC_vectorInit *vectorInits;//local
+  uint32_t vectorInitsLength;//local
+  UT_array* reachable;//local
+  CopyObjectMap* copyObjectMap;//local
+  bool copyImmutable;//local
+  GC_weak weaks; /* Linked list of (live) weak pointers *///local
+  char *worldFile;//local
+  UT_array* directCloXferArray; /* Array to store closures directly transferred to this core *///local
 
   /* DEV variables
    * ------------
    * The following variables are only used for development purposes. The are to
    * be removed/not used for production/benchmarking runs.
    */
-  FILE* fp;
+  FILE* fp;//local
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
