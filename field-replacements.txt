@@ -1,0 +1,6 @@
+sessionStart
+sharedFrontier
+sharedLimit
+procStates
+sharedHeap
+secondarySharedHeap
