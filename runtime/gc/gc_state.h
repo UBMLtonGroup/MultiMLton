@@ -52,43 +52,43 @@ struct GC_state {
 
   /* Alphabetized fields follow. */
   size_t alignment; /* *///local
-  bool amInGC;
-  bool amOriginal;
-  uint32_t procId;
-  char **atMLtons; /* Initial @MLton args, processed before command line. */
-  uint32_t atMLtonsLength;
-  uint32_t atomicState;
-  objptr callFromCHandlerThread; /* Handler for exported C calls (in heap). */
-  struct GC_callStackState callStackState;
-  bool canMinor; /* TRUE iff there is space for a minor gc. */
-  struct GC_controls *controls;
-  struct GC_cumulativeStatistics *cumulativeStatistics;
-  objptr currentThread; /* Currently executing thread (in heap). */
+  bool amInGC; //local
+  bool amOriginal; //local
+  uint32_t procId; //local
+  char **atMLtons; /* Initial @MLton args, processed before command line. *///global
+  uint32_t atMLtonsLength; //global
+  uint32_t atomicState; //local
+  objptr callFromCHandlerThread; /* Handler for exported C calls (in heap). *///global?//global
+  struct GC_callStackState callStackState; //local
+  bool canMinor; /* TRUE iff there is space for a minor gc. *///local
+  struct GC_controls *controls; //global
+  struct GC_cumulativeStatistics *cumulativeStatistics; //global
+  objptr currentThread; /* Currently executing thread (in heap). *///local
 
-  struct GC_forwardState forwardState;
-  pointer ffiOpArgsResPtr;
-  GC_frameLayout frameLayouts; /* Array of frame layouts. */
-  uint32_t frameLayoutsLength; /* Cardinality of frameLayouts array. */
+  struct GC_forwardState forwardState; //local
+  pointer ffiOpArgsResPtr; //local
+  GC_frameLayout frameLayouts; /* Array of frame layouts. *///local?//local
+  uint32_t frameLayoutsLength; /* Cardinality of frameLayouts array. *///local
   /* Currently only used to hold raise operands. XXX at least i think so */
-  Pointer *globalObjptrNonRoot;
+  Pointer *globalObjptrNonRoot;//local
   /* Ordinary globals */
-  objptr *globals;
-  uint32_t globalsLength;
-  bool hashConsDuringGC;
-  struct GC_heap *heap;
-  struct GC_intInfInit *intInfInits;
-  uint32_t intInfInitsLength;
-  struct GC_lastMajorStatistics *lastMajorStatistics;
-  struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;
-  pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP */
-  pointer sharedLimitPlusSlop;
-  pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
-  pointer sharedStart;
-  int (*loadGlobals)(FILE *f); /* loads the globals from the file. */
-  uint32_t magic; /* The magic number for this executable. */
-  uint32_t maxFrameSize;
-  bool mutatorMarksCards;
-  bool selectiveDebug;
+  objptr *globals;//local
+  uint32_t globalsLength;//local
+  bool hashConsDuringGC;//local
+  struct GC_heap *heap;//local
+  struct GC_intInfInit *intInfInits;//local
+  uint32_t intInfInitsLength;//local
+  struct GC_lastMajorStatistics *lastMajorStatistics;//local
+  struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;//local
+  pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP *///local
+  pointer sharedLimitPlusSlop;//local
+  pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier *///local
+  pointer sharedStart;//local
+  int (*loadGlobals)(FILE *f); /* loads the globals from the file. *///global
+  uint32_t magic; /* The magic number for this executable. *///global
+  uint32_t maxFrameSize;//global
+  bool mutatorMarksCards;//local
+  bool selectiveDebug;//global
   /* For PCML */
   pthread_t pthread;//local
   int32_t timeInterval; /* In milliseconds *///local
