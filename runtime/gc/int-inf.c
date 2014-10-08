@@ -102,8 +102,8 @@ void initIntInfRes (GC_state s, __mpz_struct *res,
   GC_intInf bp;
   size_t nlimbs;
 
-  assert (bytes <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-  bp = (GC_intInf)s->sharedFrontier;
+  assert (bytes <= (size_t)(s->sharedLimitPlusSlop - s->globalState.sharedFrontier));
+  bp = (GC_intInf)s->globalState.sharedFrontier;
   /* We have as much space for the limbs as there is to the end of the
    * heap->  Divide by (sizeof(mp_limb_t)) to get number of limbs.
    */
@@ -174,7 +174,7 @@ objptr finiIntInfRes (GC_state s, __mpz_struct *res, size_t bytes) {
   bp->counter = (GC_arrayCounter)0;
   bp->length = (GC_arrayLength)(size + 1); /* +1 for isneg field */
   bp->header = GC_INTINF_HEADER;
-  return pointerToObjptr ((pointer)&bp->obj, s->sharedHeap->start);
+  return pointerToObjptr ((pointer)&bp->obj, s->globalState.sharedHeap->start);
 }
 
 static inline objptr binary (objptr lhs, objptr rhs, size_t bytes,

@@ -185,7 +185,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
 
       if (!(s->forwardState.forceStackForwarding || stack->isParasitic)) { /* stack need not be forwarded */
         //XXX KC refactor
-        if (isObjptrInHeap (s, s->sharedHeap, stack->thread)) {
+        if (isObjptrInHeap (s, s->globalState.sharedHeap, stack->thread)) {
           if (DEBUG_DETAILED)
             fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread already in sharedHeap at "FMTOBJPTR"\n",
                      (uintptr_t)p, stack->thread);
@@ -203,7 +203,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
         pointer thrd = objptrToPointer (stack->thread, s->heap->start);
         assert (getHeader (thrd) == GC_FORWARDED);
         stack->thread = *(objptr*)thrd;
-        thrd = objptrToPointer (stack->thread, s->sharedHeap->start);
+        thrd = objptrToPointer (stack->thread, s->globalState.sharedHeap->start);
         if (DEBUG_DETAILED)
           fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread is "FMTPTR"\n",
                    (uintptr_t)p, (uintptr_t)thrd);
@@ -227,7 +227,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
           stack->thread = *(objptr*)thrd;
         }
         else {
-          assert (isPointerInHeap (s, s->sharedHeap, thrd));
+          assert (isPointerInHeap (s, s->globalState.sharedHeap, thrd));
         }
       }
     }
@@ -242,10 +242,10 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       assert (0 and "Should not reach here\n");
     }
 
-    if (s->sharedFrontier != s->forwardState.back) {
+    if (s->globalState.sharedFrontier != s->forwardState.back) {
       SkipRange* sr = (SkipRange*) malloc (sizeof (SkipRange));
       sr->start = s->forwardState.back;
-      sr->end = s->sharedFrontier;
+      sr->end = s->globalState.sharedFrontier;
       sr->next = NULL;
 
       if (s->forwardState.rangeListLast == NULL) {
@@ -264,11 +264,11 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       if (DEBUG_DETAILED)
         fprintf (stderr, "New skip range from "FMTPTR" to "FMTPTR" [%d]\n",
                  (uintptr_t)sr->start, (uintptr_t)sr->end, s->procId);
-      s->forwardState.back = s->sharedFrontier;
+      s->forwardState.back = s->globalState.sharedFrontier;
     }
 
     /* Copy the object. */
-    GC_memcpy (p - headerBytes, s->sharedFrontier, size);
+    GC_memcpy (p - headerBytes, s->globalState.sharedFrontier, size);
     if ((DEBUG_DETAILED) and FALSE) {
       fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
                uintmaxToCommaString (objectBytes),
@@ -325,9 +325,9 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     }
 
     /* Update the back of the queue. */
-    s->sharedFrontier += size + skip;
+    s->globalState.sharedFrontier += size + skip;
     assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE, s->alignment));
-    s->forwardState.back = s->sharedFrontier;
+    s->forwardState.back = s->globalState.sharedFrontier;
   }
 
   if (s->copyImmutable and (not hasIdentity)) {
@@ -348,7 +348,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
                (uintptr_t)*opp);
     forwardObjptrToSharedHeap (s, opp);
   }
-  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
+  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->globalState.sharedHeap, *opp));
 }
 
 /* forward (s, opp)
@@ -415,7 +415,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
 
       reservedNew = sizeofStackShrinkReserved (s, stack, isCurrentStack);
       if (reservedNew < stack->reserved) {
-        if (DEBUG_STACKS or s->controls->messages)
+        if (DEBUG_STACKS or s->globalState.controls->messages)
           fprintf (stderr,
                    "[GC: Shrinking stack of size %s bytes to size %s bytes, using %s bytes.]\n",
                    uintmaxToCommaString(stack->reserved),
@@ -495,7 +495,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     forwardObjptr (s, opp);
   }
 
-  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
+  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->globalState.sharedHeap, *opp));
 }
 
 void forwardObjptrIfInNursery (GC_state s, objptr *opp) {
@@ -504,7 +504,7 @@ void forwardObjptrIfInNursery (GC_state s, objptr *opp) {
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
-  if (p < s->heap->nursery or isPointerInHeap (s, s->sharedHeap, p))
+  if (p < s->heap->nursery or isPointerInHeap (s, s->globalState.sharedHeap, p))
     return;
   if (DEBUG_GENERATIONAL)
     fprintf (stderr,
@@ -553,7 +553,7 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
     p = objptrToPointer (op, s->heap->start);
   }
 
-  if (isPointerInHeap (s, s->sharedHeap, (pointer)opp) and isPointerInAnyLocalHeap (s, p)) {
+  if (isPointerInHeap (s, s->globalState.sharedHeap, (pointer)opp) and isPointerInAnyLocalHeap (s, p)) {
     //opp is in shared heap, and p is in any local heap.
     GC_state r = getGCStateFromPointer (s, p);
     GC_objectTypeTag tag;
@@ -573,10 +573,10 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
       //parasitic, add a dangling pointer.
       GC_stack stk = (GC_stack)p;
       stk->thread = (objptr)((uintptr_t)opp - (uintptr_t)offsetof (struct GC_thread, stack));
-      assert (isObjptrInHeap (s, s->sharedHeap, stk->thread));
+      assert (isObjptrInHeap (s, s->globalState.sharedHeap, stk->thread));
 
       #if ASSERT
-      pointer thrd = objptrToPointer (stk->thread, s->sharedHeap->start);
+      pointer thrd = objptrToPointer (stk->thread, s->globalState.sharedHeap->start);
       header = getHeader (thrd);
       header = header & (~VIRGIN_MASK);
       assert (header == (GC_header)0x80003);
@@ -597,9 +597,9 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
       pointer origBack = s->forwardState.back;
       forwardObjptr (s, opp);
       pointer newBack = s->forwardState.back;
-      s->cumulativeStatistics->bytesLifted += (newBack - origBack);
-      headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
-      header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+      s->globalState.cumulativeStatistics->bytesLifted += (newBack - origBack);
+      headerp = getHeaderp (objptrToPointer (*opp, s->globalState.sharedHeap->start));
+      header = getHeader (objptrToPointer (*opp, s->globalState.sharedHeap->start));
       assert (MARK_MASK & header);
       *headerp = (header | LIFT_MASK) & ~MARK_MASK;
     }
@@ -626,7 +626,7 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
     op = *opp;
     p = objptrToPointer (op, s->heap->start);
   }
-  if (isPointerInHeap (s, s->sharedHeap, p)) {
+  if (isPointerInHeap (s, s->globalState.sharedHeap, p)) {
 
     if (DEBUG_DETAILED)
       fprintf (stderr,
@@ -634,8 +634,8 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
                (uintptr_t)opp, op, (uintptr_t)p);
 
     //remove the lift bit if not forwarded
-    GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
-    GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+    GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->globalState.sharedHeap->start));
+    GC_header header = getHeader (objptrToPointer (*opp, s->globalState.sharedHeap->start));
     if (header != GC_FORWARDED)
       *headerp = header & (~(LIFT_MASK));
 
@@ -646,8 +646,8 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
 
     forwardObjptr (s, opp);
     //add the lift bit back again
-    headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
-    header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+    headerp = getHeaderp (objptrToPointer (*opp, s->globalState.sharedHeap->start));
+    header = getHeader (objptrToPointer (*opp, s->globalState.sharedHeap->start));
     *headerp = header | LIFT_MASK;
 
     if (DEBUG_DETAILED)
@@ -688,9 +688,9 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
       pointer origBack = s->forwardState.back;
       forwardObjptr (s, opp);
       pointer newBack = s->forwardState.back;
-      s->cumulativeStatistics->bytesLifted += (newBack - origBack);
-      GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
-      GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+      s->globalState.cumulativeStatistics->bytesLifted += (newBack - origBack);
+      GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->globalState.sharedHeap->start));
+      GC_header header = getHeader (objptrToPointer (*opp, s->globalState.sharedHeap->start));
       *headerp = header | LIFT_MASK;
     }
   }
@@ -733,7 +733,7 @@ checkCard:
   if (cardMap[cardIndex]) {
     pointer lastObject;
 
-    s->cumulativeStatistics->numCardsMarked++;
+    s->globalState.cumulativeStatistics->numCardsMarked++;
     if (DEBUG_GENERATIONAL)
       fprintf (stderr, "card %"PRIuMAX" is marked  objectStart = "FMTPTR"\n",
                (uintmax_t)cardIndex, (uintptr_t)objectStart);
@@ -751,7 +751,7 @@ checkCard:
      */
     objectStart = foreachObjptrInRange (s, objectStart, &cardEnd,
                                         forwardObjptrIfInNursery, FALSE);
-    s->cumulativeStatistics->bytesScannedMinor += objectStart - lastObject;
+    s->globalState.cumulativeStatistics->bytesScannedMinor += objectStart - lastObject;
     if (objectStart == oldGenEnd)
       goto done;
     cardIndex = sizeToCardMapIndex (objectStart - oldGenStart);

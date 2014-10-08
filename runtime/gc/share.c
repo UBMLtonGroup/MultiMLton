@@ -18,7 +18,7 @@ void GC_share (GC_state s, pointer object) {
   if (DEBUG_SHARE)
     fprintf (stderr, "GC_share "FMTPTR" [%d]\n", (uintptr_t)object,
              Proc_processorNumber (s));
-  if (DEBUG_SHARE or s->controls->messages)
+  if (DEBUG_SHARE or s->globalState.controls->messages)
     s->lastMajorStatistics->bytesHashConsed = 0;
   // Don't hash cons during the first round of marking.
   bytesExamined =
@@ -30,8 +30,8 @@ void GC_share (GC_state s, pointer object) {
                  TRUE, FALSE, FALSE, FALSE);
   freeHashTable (s->objectHashTable);
   bytesHashConsed = s->lastMajorStatistics->bytesHashConsed;
-  s->cumulativeStatistics->bytesHashConsed += bytesHashConsed;
-  if (DEBUG_SHARE or s->controls->messages)
+  s->globalState.cumulativeStatistics->bytesHashConsed += bytesHashConsed;
+  if (DEBUG_SHARE or s->globalState.controls->messages)
     printBytesHashConsedMessage (bytesHashConsed, bytesExamined);
   LEAVE0 (s);
 

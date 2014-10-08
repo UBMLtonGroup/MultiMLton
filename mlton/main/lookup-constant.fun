@@ -61,16 +61,16 @@ val gcFields =
     "limit",
     "limitPlusSlop",
     "localHeapStart",
-    "maxFrameSize",
+    "globalState.maxFrameSize",
     "procId",
     "returnToC",
-    "sharedHeapStart",
-    "sharedHeapEnd",
+    "globalState.sharedHeapStart",
+    "globalState.sharedHeapEnd",
     "signalsInfo.signalIsPending",
     "stackBottom",
     "stackLimit",
     "stackTop",
-    "sessionStart"
+    "globalState.sessionStart"
     ]
 
 val gcFieldsOffsets =

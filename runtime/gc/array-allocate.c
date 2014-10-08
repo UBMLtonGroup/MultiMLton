@@ -51,7 +51,7 @@ pointer GC_arrayAllocate (GC_state s,
              uintmaxToCommaString(ensureBytesFree));
 
   /* Determine whether we will perform this allocation locally or not */
-  holdLock = arraySizeAligned >= s->controls->oldGenArraySize;
+  holdLock = arraySizeAligned >= s->globalState.controls->oldGenArraySize;
 
   if (holdLock) {
     s->syncReason = SYNC_OLD_GEN_ARRAY;
@@ -66,7 +66,7 @@ pointer GC_arrayAllocate (GC_state s,
     /* This must be updated while holding the lock! */
     s->heap->oldGenSize += arraySizeAligned;
     assert (s->heap->start + s->heap->oldGenSize <= s->heap->nursery);
-    s->cumulativeStatistics->bytesAllocated += arraySizeAligned;
+    s->globalState.cumulativeStatistics->bytesAllocated += arraySizeAligned;
     /* NB LEAVE appears below since no heap invariant holds while the
        oldGenSize has been updated but the array remains uninitialized. */
   } else {

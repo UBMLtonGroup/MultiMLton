@@ -11,7 +11,7 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
 
   fixFwdObjptr (s, opp);
   /* If pointer has already been forwarded, skip setting lift bit */
-  if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
+  if (isObjptrInHeap (s, s->globalState.sharedHeap, *opp)) {
     if (DEBUG_LWTGC) {
       fprintf (stderr, "\t object in shared heap\n");
     }
@@ -24,7 +24,7 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
   GC_header new_header = getHeader(new_p);
   GC_header* new_headerp = getHeaderp (new_p);
 
-  if (isPointerInHeap (s, s->sharedHeap, new_p)) {
+  if (isPointerInHeap (s, s->globalState.sharedHeap, new_p)) {
     /* Set lift mask */
     if (DEBUG_LWTGC)
       fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
@@ -46,7 +46,7 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
     }
   }
   /* If pointer has already been forwarded, skip setting lift bit */
-  if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
+  if (isObjptrInHeap (s, s->globalState.sharedHeap, *opp)) {
     if (DEBUG_LWTGC) {
       fprintf (stderr, "\t object in shared heap\n");
     }
@@ -56,12 +56,12 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
   forwardObjptrToSharedHeap (s, opp);
 
   objptr new_op = *opp;
-  pointer new_p = objptrToPointer (new_op, s->sharedHeap->start);
+  pointer new_p = objptrToPointer (new_op, s->globalState.sharedHeap->start);
 
   uint32_t typeIndex = (getHeader(new_p) & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
   uint32_t threadTypeIndex = 1;
 
-  if (isPointerInHeap (s, s->sharedHeap, new_p) && (typeIndex != threadTypeIndex)) {
+  if (isPointerInHeap (s, s->globalState.sharedHeap, new_p) && (typeIndex != threadTypeIndex)) {
     size_t objSize = sizeofObject (s, new_p);
     old_p -= sizeofObjectHeader (s, getHeader (new_p));
     if (DEBUG_DETAILED)
@@ -89,7 +89,7 @@ static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
     op = *opp;
   }
 
-  bool res = isObjptrInHeap (s, s->sharedHeap, op);
+  bool res = isObjptrInHeap (s, s->globalState.sharedHeap, op);
   if (!res) {
     GC_header* hp = getHeaderp (objptrToPointer (op, s->heap->start));
     GC_objectTypeTag tag;
@@ -138,9 +138,9 @@ void liftAllObjectsDuringInit (GC_state s) {
     fprintf (stderr, "liftAllObjectsDuringInit: \n");
 
   //Set up the forwarding state
-  pointer toStart = alignFrontier (s, s->sharedFrontier);
-  s->forwardState.toStart = s->sharedFrontier;
-  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+  pointer toStart = alignFrontier (s, s->globalState.sharedFrontier);
+  s->forwardState.toStart = s->globalState.sharedFrontier;
+  s->forwardState.toLimit = s->globalState.sharedHeap->start + s->globalState.sharedHeap->size;
   s->forwardState.back = toStart;
   s->forwardState.rangeListCurrent = NULL;
   s->forwardState.rangeListLast = NULL;
@@ -170,7 +170,7 @@ void liftAllObjectsDuringInit (GC_state s) {
 
   /* Force a major GC to clean up the local heap. */
   fixForwardingPointers (s, TRUE);
-  s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->size;
+  s->lastSharedMajorStatistics->bytesLive = s->globalState.sharedHeap->size;
   endAtomic (s);
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: Exiting\n");
@@ -191,8 +191,8 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
   while (!done) {
     //Set up the forwarding state
     s->forwardState.forceStackForwarding = forceStackForwarding;
-    s->forwardState.toStart = s->sharedFrontier;
-    s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+    s->forwardState.toStart = s->globalState.sharedFrontier;
+    s->forwardState.toLimit = s->globalState.sharedHeap->start + s->globalState.sharedHeap->size;
     s->forwardState.back = s->forwardState.toStart;
     s->forwardState.rangeListCurrent = NULL;
     s->forwardState.rangeListLast = NULL;
@@ -229,7 +229,7 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
   clearRangeList (s);
 
   if (statValid && needGCTime (s))
-    stopWallTiming (&tv_rt, &s->cumulativeStatistics->tv_rt);
+    stopWallTiming (&tv_rt, &s->globalState.cumulativeStatistics->tv_rt);
 
 }
 
@@ -291,7 +291,7 @@ pointer GC_moveWithCopyType (GC_state s, pointer p,
   if (DEBUG_LWTGC)
     fprintf (stderr, "GC_move: After move transitive closure [%d]\n", s->procId);
 
-  assert (isObjptrInHeap (s, s->sharedHeap, op));
+  assert (isObjptrInHeap (s, s->globalState.sharedHeap, op));
 
   if (skipFixForwardingPointers) {
     //Free the objects in copyObjectMap
@@ -323,7 +323,7 @@ pointer GC_moveWithCopyType (GC_state s, pointer p,
 
   LEAVE_LOCAL0 (s);
 
-  pointer res = objptrToPointer (*pOp, s->sharedHeap->start);
+  pointer res = objptrToPointer (*pOp, s->globalState.sharedHeap->start);
   assert (res != BOGUS_POINTER);
 
   if (DEBUG_LWTGC)
@@ -359,8 +359,8 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
     fprintf (stderr, "moveEachObjptrInObject: \n");
 
   //Set up the forwarding state
-  s->forwardState.toStart = s->sharedFrontier;
-  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+  s->forwardState.toStart = s->globalState.sharedFrontier;
+  s->forwardState.toLimit = s->globalState.sharedHeap->start + s->globalState.sharedHeap->size;
   s->forwardState.back = s->forwardState.toStart;
   s->forwardState.rangeListCurrent = NULL;
   s->forwardState.rangeListLast = NULL;
@@ -395,7 +395,7 @@ void jumpToReturnLocation (GC_state s) {
 }
 
 bool GC_isInSharedOrForwarded (GC_state s, pointer p) {
-  if (getHeader (p) == GC_FORWARDED || isPointerInHeap (s, s->sharedHeap,p))
+  if (getHeader (p) == GC_FORWARDED || isPointerInHeap (s, s->globalState.sharedHeap,p))
     return TRUE;
   return FALSE;
 }

@@ -16,11 +16,11 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
 
   s->lastMajorStatistics->numMinorGCs = 0;
   numGCs =
-    s->cumulativeStatistics->numCopyingGCs
-    + s->cumulativeStatistics->numMarkCompactGCs;
+    s->globalState.cumulativeStatistics->numCopyingGCs
+    + s->globalState.cumulativeStatistics->numMarkCompactGCs;
   if (0 < numGCs
-      and ((float)(s->cumulativeStatistics->numHashConsGCs) / (float)(numGCs)
-           < s->controls->ratios.hashCons))
+      and ((float)(s->globalState.cumulativeStatistics->numHashConsGCs) / (float)(numGCs)
+           < s->globalState.controls->ratios.hashCons))
     s->hashConsDuringGC = TRUE;
   desiredSize =
     sizeofHeapDesired (s, s->lastMajorStatistics->bytesLive + bytesRequested,
@@ -43,8 +43,8 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
 
   s->hashConsDuringGC = FALSE;
   s->lastMajorStatistics->bytesLive = s->heap->oldGenSize;
-  if (s->lastMajorStatistics->bytesLive > s->cumulativeStatistics->maxBytesLive)
-    s->cumulativeStatistics->maxBytesLive = s->lastMajorStatistics->bytesLive;
+  if (s->lastMajorStatistics->bytesLive > s->globalState.cumulativeStatistics->maxBytesLive)
+    s->globalState.cumulativeStatistics->maxBytesLive = s->lastMajorStatistics->bytesLive;
   /* Notice that the s->lastMajorStatistics->bytesLive below is
    * different than the s->lastMajorStatistics->bytesLive used as an
    * argument to createHeapSecondary above.  Above, it was an
@@ -68,7 +68,7 @@ void growStackCurrent (GC_state s, bool allocInOldGen, size_t reservedNew) {
   else
     reserved = sizeofStackGrowReserved (s, getStackCurrent(s));
   assert (getStackCurrent (s)->reserved >= getStackCurrent (s)->used);
-  if (DEBUG_STACKS or s->controls->messages) {
+  if (DEBUG_STACKS or s->globalState.controls->messages) {
     fprintf (stderr,
              "[GC: Growing stack of size %s bytes to size %s bytes, using %s bytes.]\n",
              uintmaxToCommaString(getStackCurrent(s)->reserved),
@@ -117,7 +117,7 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
       fprintf (stderr, "Starting fixForwardingPointers\n");
 
   enterGC (s);
-  s->cumulativeStatistics->numGCs++;
+  s->globalState.cumulativeStatistics->numGCs++;
   if (needGCTime (s))
     startWallTiming (&tv_start);
   size_t nurseryBytesRequested = GC_HEAP_LIMIT_SLOP;
@@ -136,9 +136,9 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   #endif
 
   if (needGCTime (s)) {
-    gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
-    s->cumulativeStatistics->maxPauseTime =
-      max (s->cumulativeStatistics->maxPauseTime, gcTime);
+    gcTime = stopWallTiming (&tv_start, &s->globalState.cumulativeStatistics->ru_gc);
+    s->globalState.cumulativeStatistics->maxPauseTime =
+      max (s->globalState.cumulativeStatistics->maxPauseTime, gcTime);
   } else
     gcTime = 0;  /* Assign gcTime to quell gcc warning. */
 
@@ -220,60 +220,60 @@ void performSharedGC (GC_state s, size_t bytesRequested) {
 
   bytesRequested = 0;
   for (int proc=0; proc < s->numberOfProcs; proc++)
-    bytesRequested += getThreadCurrent(&s->procStates[proc])->bytesNeeded;
+    bytesRequested += getThreadCurrent(&s->globalState.procStates[proc])->bytesNeeded;
 
   size_t availableBytes =
-    (size_t)(s->sharedHeap->start + s->sharedHeap->availableSize - s->sharedHeap->frontier);
+    (size_t)(s->globalState.sharedHeap->start + s->globalState.sharedHeap->availableSize - s->globalState.sharedHeap->frontier);
 
   /* See if a GC has already been performed */
   if (bytesRequested > availableBytes) {
     /* perform GC */
     //Clear remembered stacks
     for (int proc=0; proc < s->numberOfProcs; proc++)
-      clearDanglingStackList (&s->procStates[proc]);
-    bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
+      clearDanglingStackList (&s->globalState.procStates[proc]);
+    bytesRequested = (s->globalState.controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
 
-    if (DEBUG or s->controls->messages) {
-        size_t nurserySize = s->sharedHeap->size - (s->sharedHeap->nursery - s->sharedHeap->start);
-        size_t nurseryUsed = s->sharedFrontier - s->sharedHeap->nursery;
+    if (DEBUG or s->globalState.controls->messages) {
+        size_t nurserySize = s->globalState.sharedHeap->size - (s->globalState.sharedHeap->nursery - s->globalState.sharedHeap->start);
+        size_t nurseryUsed = s->globalState.sharedFrontier - s->globalState.sharedHeap->nursery;
         fprintf (stderr,
                 "[GC: Starting shared heap gc #%s; requesting %s bytes,]\n",
-                uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
-                                     s->cumulativeStatistics->numMarkCompactSharedGCs + 1),
+                uintmaxToCommaString(s->globalState.cumulativeStatistics->numCopyingSharedGCs +
+                                     s->globalState.cumulativeStatistics->numMarkCompactSharedGCs + 1),
                 uintmaxToCommaString(bytesRequested));
         fprintf (stderr,
                 "[GC:\tshared heap at "FMTPTR" of size %s bytes,]\n",
-                (uintptr_t)(s->sharedHeap->start),
-                uintmaxToCommaString(s->sharedHeap->size));
+                (uintptr_t)(s->globalState.sharedHeap->start),
+                uintmaxToCommaString(s->globalState.sharedHeap->size));
         fprintf (stderr,
                 "[GC:\twith nursery of size %s bytes (%.1f%% of heap),]\n",
                 uintmaxToCommaString(nurserySize),
-                100.0 * ((double)(nurserySize) / (double)(s->sharedHeap->size)));
+                100.0 * ((double)(nurserySize) / (double)(s->globalState.sharedHeap->size)));
         fprintf (stderr,
                 "[GC:\tand old-gen of size %s bytes (%.1f%% of heap),]\n",
-                uintmaxToCommaString(s->sharedHeap->oldGenSize),
-                100.0 * ((double)(s->sharedHeap->oldGenSize) / (double)(s->sharedHeap->size)));
+                uintmaxToCommaString(s->globalState.sharedHeap->oldGenSize),
+                100.0 * ((double)(s->globalState.sharedHeap->oldGenSize) / (double)(s->globalState.sharedHeap->size)));
         fprintf (stderr,
                 "[GC:\tand nursery using %s bytes (%.1f%% of heap, %.1f%% of nursery).]\n",
                 uintmaxToCommaString(nurseryUsed),
-                100.0 * ((double)(nurseryUsed) / (double)(s->sharedHeap->size)),
+                100.0 * ((double)(nurseryUsed) / (double)(s->globalState.sharedHeap->size)),
                 100.0 * ((double)(nurseryUsed) / (double)(nurserySize)));
     }
 
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       /* Add in the bonus slop now since we need to fill it */
-      s->procStates[proc].sharedLimitPlusSlop += GC_BONUS_SLOP;
-      if (s->procStates[proc].sharedLimitPlusSlop != s->sharedHeap->frontier) {
+      s->globalState.procStates[proc].sharedLimitPlusSlop += GC_BONUS_SLOP;
+      if (s->globalState.procStates[proc].sharedLimitPlusSlop != s->globalState.sharedHeap->frontier) {
         /* Fill to avoid an uninitialized gap in the middle of the heap */
-        bytesFilled += fillGap (s, s->procStates[proc].sharedFrontier,
-                                s->procStates[proc].sharedLimitPlusSlop);
+        bytesFilled += fillGap (s, s->globalState.procStates[proc].globalState.sharedFrontier,
+                                s->globalState.procStates[proc].sharedLimitPlusSlop);
       }
       else {
         /* If this is at the end of the heap there is no need to fill the gap
          -- there will be no break in the initialized portion of the
          heap.  Also, this is the last chunk allocated in the nursery, so it is
          safe to use the frontier from this processor as the global frontier.  */
-        s->sharedHeap->oldGenSize = s->procStates[proc].sharedFrontier - s->sharedHeap->start;
+        s->globalState.sharedHeap->oldGenSize = s->globalState.procStates[proc].globalState.sharedFrontier - s->globalState.sharedHeap->start;
       }
     }
 
@@ -282,7 +282,7 @@ void performSharedGC (GC_state s, size_t bytesRequested) {
     /* This is the maximum size (over approximation) of the shared heap. We
      * will resize the heap after collection to a reasonable size. */
     for (int proc=0; proc < s->numberOfProcs; proc++) {
-      GC_state r = &s->procStates[proc];
+      GC_state r = &s->globalState.procStates[proc];
       objptr liftOp = r->forwardState.liftingObject;
       if (liftOp != BOGUS_OBJPTR)
         maxBytes += estimateSizeForLifting (r, objptrToPointer (liftOp, r->heap->start));
@@ -291,53 +291,53 @@ void performSharedGC (GC_state s, size_t bytesRequested) {
     /* We are being optimistic with desired size since maxBytes is an
      * over-approzimation of live size */
     size_t desiredSize =
-      ((s->controls->fixedHeap != 0 and maxBytes > s->controls->fixedHeap) or
-       (s->controls->maxHeapShared != 0 and maxBytes > s->controls->maxHeapShared))
+      ((s->globalState.controls->fixedHeap != 0 and maxBytes > s->globalState.controls->fixedHeap) or
+       (s->globalState.controls->maxHeapShared != 0 and maxBytes > s->globalState.controls->maxHeapShared))
       ? maxBytes : sizeofHeapDesired (s, maxBytes, 0, SHARED_HEAP);
     if (DEBUG)
       fprintf (stderr, "performSharedGC: desiredSize=%s maxBytes=%s\n",
                uintmaxToCommaString (desiredSize),
                uintmaxToCommaString (maxBytes));
-    if (desiredSize > s->secondarySharedHeap->size)
+    if (desiredSize > s->globalState.secondarySharedHeap->size)
       resizeSharedHeapSecondary (s, desiredSize);
     if (not FORCE_MARK_COMPACT
-        and (s->secondarySharedHeap->size != 0
+        and (s->globalState.secondarySharedHeap->size != 0
              or createSharedHeapSecondary (s, desiredSize)))
       majorCheneyCopySharedGC (s);
     else {
       size_t newSize = 0;
-      if (s->controls->fixedHeap != 0 and desiredSize > s->controls->fixedHeap)
-        newSize = s->controls->fixedHeap;
-      else if (s->controls->maxHeapShared != 0 and desiredSize > s->controls->maxHeapShared)
-        newSize = s->controls->maxHeapShared;
-      else if (desiredSize > s->sharedHeap->size)
+      if (s->globalState.controls->fixedHeap != 0 and desiredSize > s->globalState.controls->fixedHeap)
+        newSize = s->globalState.controls->fixedHeap;
+      else if (s->globalState.controls->maxHeapShared != 0 and desiredSize > s->globalState.controls->maxHeapShared)
+        newSize = s->globalState.controls->maxHeapShared;
+      else if (desiredSize > s->globalState.sharedHeap->size)
         newSize = desiredSize;
       if (newSize > 0) {
-        assert (newSize >= s->sharedHeap->oldGenSize);
-        resizeHeap (s, s->sharedHeap, newSize);
+        assert (newSize >= s->globalState.sharedHeap->oldGenSize);
+        resizeHeap (s, s->globalState.sharedHeap, newSize);
       }
       majorMarkCompactSharedGC (s);
     }
 
-    s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
-    if (s->lastSharedMajorStatistics->bytesLive > s->cumulativeStatistics->maxSharedBytesLive)
-      s->cumulativeStatistics->maxSharedBytesLive = s->lastSharedMajorStatistics->bytesLive;
-    resizeHeap (s, s->sharedHeap, s->lastSharedMajorStatistics->bytesLive + bytesRequested);
-    resizeSharedHeapSecondary (s, s->sharedHeap->size);
-    assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
+    s->lastSharedMajorStatistics->bytesLive = s->globalState.sharedHeap->oldGenSize;
+    if (s->lastSharedMajorStatistics->bytesLive > s->globalState.cumulativeStatistics->maxSharedBytesLive)
+      s->globalState.cumulativeStatistics->maxSharedBytesLive = s->lastSharedMajorStatistics->bytesLive;
+    resizeHeap (s, s->globalState.sharedHeap, s->lastSharedMajorStatistics->bytesLive + bytesRequested);
+    resizeSharedHeapSecondary (s, s->globalState.sharedHeap->size);
+    assert (s->globalState.sharedHeap->oldGenSize + bytesRequested <= s->globalState.sharedHeap->size);
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
-    s->cumulativeStatistics->bytesFilled += bytesFilled;
+    s->globalState.cumulativeStatistics->bytesFilled += bytesFilled;
     if (DEBUG)
       fprintf (stderr, "[GC: Finished shared heap gc #%s; oldGenSize is %s]\n",
-               uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
-                                    s->cumulativeStatistics->numMarkCompactSharedGCs),
-               uintmaxToCommaString (s->sharedHeap->oldGenSize));
+               uintmaxToCommaString(s->globalState.cumulativeStatistics->numCopyingSharedGCs +
+                                    s->globalState.cumulativeStatistics->numMarkCompactSharedGCs),
+               uintmaxToCommaString (s->globalState.sharedHeap->oldGenSize));
   }
 
   LEAVE0 (s);
   leaveGC (s);
 
-  if (s->controls->reclaimObjects) {
+  if (s->globalState.controls->reclaimObjects) {
     computeExclusivityInformation (s);
   }
 
@@ -359,13 +359,13 @@ void performGC (GC_state s,
   size_t totalBytesRequested;
 
   enterGC (s);
-  s->cumulativeStatistics->numGCs++;
-  if (DEBUG or s->controls->messages) {
+  s->globalState.cumulativeStatistics->numGCs++;
+  if (DEBUG or s->globalState.controls->messages) {
     size_t nurserySize = s->heap->size - (s->heap->nursery - s->heap->start);
     size_t nurseryUsed = s->frontier - s->heap->nursery;
     fprintf (stderr,
              "[GC: Starting gc #%s; requesting %s nursery bytes and %s old-gen bytes,]\n",
-             uintmaxToCommaString(s->cumulativeStatistics->numGCs),
+             uintmaxToCommaString(s->globalState.cumulativeStatistics->numGCs),
              uintmaxToCommaString(nurseryBytesRequested),
              uintmaxToCommaString(oldGenBytesRequested));
     fprintf (stderr,
@@ -426,16 +426,16 @@ void performGC (GC_state s,
 
   setGCStateCurrentThreadAndStack (s);
   if (needGCTime (s)) {
-    gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
-    s->cumulativeStatistics->maxPauseTime =
-      max (s->cumulativeStatistics->maxPauseTime, gcTime);
+    gcTime = stopWallTiming (&tv_start, &s->globalState.cumulativeStatistics->ru_gc);
+    s->globalState.cumulativeStatistics->maxPauseTime =
+      max (s->globalState.cumulativeStatistics->maxPauseTime, gcTime);
   } else
     gcTime = 0;  /* Assign gcTime to quell gcc warning. */
-  if (DEBUG or s->controls->messages) {
+  if (DEBUG or s->globalState.controls->messages) {
     size_t nurserySize = s->heap->size - (s->heap->nursery - s->heap->start);
     fprintf (stderr,
              "[GC: Finished gc #%s; time %s ms,]\n",
-             uintmaxToCommaString(s->cumulativeStatistics->numGCs),
+             uintmaxToCommaString(s->globalState.cumulativeStatistics->numGCs),
              uintmaxToCommaString(gcTime));
     fprintf (stderr,
              "[GC:\theap at "FMTPTR" of size %s bytes,]\n",
@@ -528,31 +528,31 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
 static bool allocChunkInSharedHeap (GC_state s,
                                     size_t bytesRequested) {
 
-  s->cumulativeStatistics->bytesLifted += bytesRequested;
+  s->globalState.cumulativeStatistics->bytesLifted += bytesRequested;
   while (TRUE)
   {
     /* This is the only read of the global frontier -- never read it again
        until after the swap. */
-    pointer oldFrontier = s->sharedHeap->frontier;
+    pointer oldFrontier = s->globalState.sharedHeap->frontier;
     pointer newHeapFrontier, newProcFrontier;
     pointer newStart;
     /* heap->start and heap->size are read-only (unless you hold the global
        lock) so it's ok to read them here */
-    size_t availableBytes = (size_t)((s->sharedHeap->start + s->sharedHeap->availableSize)
+    size_t availableBytes = (size_t)((s->globalState.sharedHeap->start + s->globalState.sharedHeap->availableSize)
                                      - oldFrontier);
 
-    assert (s->sharedLimitPlusSlop >= s->sharedFrontier);
+    assert (s->sharedLimitPlusSlop >= s->globalState.sharedFrontier);
 
     /* See if the mutator frontier invariant is already true */
-    if (bytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
+    if (bytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->globalState.sharedFrontier)) {
       if (DEBUG_DETAILED)
         fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
       return FALSE;
     }
 
     /* alloc a chunk so that subsequent requests can be satisfied locally */
-    if (bytesRequested < s->controls->allocChunkSize)
-        bytesRequested = s->controls->allocChunkSize;
+    if (bytesRequested < s->globalState.controls->allocChunkSize)
+        bytesRequested = s->globalState.controls->allocChunkSize;
 
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
@@ -566,14 +566,14 @@ static bool allocChunkInSharedHeap (GC_state s,
     /* Now see if we were the most recent thread to allocate */
     if (oldFrontier == s->sharedLimitPlusSlop + GC_BONUS_SLOP) {
       /* This is the next chunk so no need to fill */
-      newHeapFrontier = s->sharedFrontier + bytesRequested + GC_BONUS_SLOP;
+      newHeapFrontier = s->globalState.sharedFrontier + bytesRequested + GC_BONUS_SLOP;
       /* Leave "start" and "frontier" where they are */
       newStart = s->sharedStart;
-      newProcFrontier = s->sharedFrontier;
+      newProcFrontier = s->globalState.sharedFrontier;
     }
     else {
       /* Fill the old gap */
-      fillGap (s, s->sharedFrontier, s->sharedLimitPlusSlop + GC_BONUS_SLOP);
+      fillGap (s, s->globalState.sharedFrontier, s->sharedLimitPlusSlop + GC_BONUS_SLOP);
       /* Don't update frontier or limitPlusSlop since we will either
          overwrite them (if we succeed) or just fill the same gap again
          (if we fail).  (There is no obvious other pair of values that
@@ -585,24 +585,24 @@ static bool allocChunkInSharedHeap (GC_state s,
       newStart = oldFrontier;
     }
 
-    if (__sync_bool_compare_and_swap (&s->sharedHeap->frontier,
+    if (__sync_bool_compare_and_swap (&s->globalState.sharedHeap->frontier,
                                       oldFrontier, newHeapFrontier)) {
       if (DEBUG)
         fprintf (stderr, "[GC: Shared alloction of chunk @ "FMTPTR".] [%d]\n",
                  (uintptr_t)newProcFrontier, s->procId);
 
       s->sharedStart = newStart;
-      s->sharedFrontier = newProcFrontier;
-      assert (isFrontierAligned (s, s->sharedFrontier));
+      s->globalState.sharedFrontier = newProcFrontier;
+      assert (isFrontierAligned (s, s->globalState.sharedFrontier));
       s->sharedLimitPlusSlop = newHeapFrontier - GC_BONUS_SLOP;
-      s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+      s->globalState.sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
 
       return FALSE;
     }
     else {
       if (DEBUG)
         fprintf (stderr, "[GC: Contention for shared alloction (frontier is "FMTPTR").] [%d]\n",
-                 (uintptr_t)s->sharedHeap->frontier, s->procId);
+                 (uintptr_t)s->globalState.sharedHeap->frontier, s->procId);
     }
   }
   return FALSE;
@@ -728,20 +728,20 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
 
   if (not stackTopOk
       and (hasHeapBytesFree (s, s->heap, 0, stackBytesRequested))) {
-    if (DEBUG or s->controls->messages)
+    if (DEBUG or s->globalState.controls->messages)
       fprintf (stderr, "GC: growing stack locally... [%d]\n",
-               s->procStates ? Proc_processorNumber (s) : -1);
+               s->globalState.procStates ? Proc_processorNumber (s) : -1);
     growStackCurrent (s, FALSE, forceStackGrowthBytes);
     setGCStateCurrentThreadAndStack (s);
   }
 
-  if (DEBUG or s->controls->messages) {
+  if (DEBUG or s->globalState.controls->messages) {
     fprintf (stderr, "GC: stackInvariant: %d,%d hasLocalHeapBytesFree: %d inSection: %d force: %d [%d]\n",
              ensureStack, ensureStack and invariantForMutatorStack (s),
              hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested),
              Proc_threadInSection (s),
              forceGC,
-             s->procStates ? Proc_processorNumber (s) : -1);
+             s->globalState.procStates ? Proc_processorNumber (s) : -1);
   }
 
   if ( /* we have signals pending */
@@ -772,13 +772,13 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
       performGC (s, oldGenBytesRequested, nurseryBytesRequested, forceGC, TRUE, forceStackGrowthBytes);
     }
     else
-      if (DEBUG or s->controls->messages)
-        fprintf (stderr, "GC: Skipping GC (inside of sync). [%d]\n", s->procStates ? Proc_processorNumber (s) : -1);
+      if (DEBUG or s->globalState.controls->messages)
+        fprintf (stderr, "GC: Skipping GC (inside of sync). [%d]\n", s->globalState.procStates ? Proc_processorNumber (s) : -1);
     LEAVE_LOCAL0 (s);
   }
   else {
-    if (DEBUG or s->controls->messages)
-      fprintf (stderr, "GC: Skipping GC (invariants already hold / request satisfied locally). [%d]\n", s->procStates ? Proc_processorNumber (s) : -1);
+    if (DEBUG or s->globalState.controls->messages)
+      fprintf (stderr, "GC: Skipping GC (invariants already hold / request satisfied locally). [%d]\n", s->globalState.procStates ? Proc_processorNumber (s) : -1);
 
     /* These are safe even without ENTER/LEAVE */
     assert (isAligned (s->heap->size, s->sysvals.pageSize));
@@ -802,7 +802,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
 
 void GC_collect (GC_state s, size_t bytesRequested, bool force,
                  char *file, int line) {
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr, "%s %d: GC_collect [%d]\n", file, line,
              Proc_processorNumber (s));
 
@@ -810,9 +810,9 @@ void GC_collect (GC_state s, size_t bytesRequested, bool force,
    * much as GC_HEAP_LIMIT_SLOP.
    */
   if (0 == bytesRequested)
-    bytesRequested = s->controls->allocChunkSize;
-  else if (bytesRequested < s->controls->allocChunkSize)
-    bytesRequested = s->controls->allocChunkSize;
+    bytesRequested = s->globalState.controls->allocChunkSize;
+  else if (bytesRequested < s->globalState.controls->allocChunkSize)
+    bytesRequested = s->globalState.controls->allocChunkSize;
   else
     bytesRequested += GC_HEAP_LIMIT_SLOP;
 

@@ -3,7 +3,7 @@
 
 int32_t Proc_processorNumber (GC_state s) {
   for (int proc = 0; proc < s->numberOfProcs; proc ++) {
-    if (s == &(s->procStates[proc])) {
+    if (s == &(s->globalState.procStates[proc])) {
       return (int32_t)proc;
     }
   }
@@ -74,7 +74,7 @@ void Proc_beginCriticalSection (GC_state s) {
     if (p == s->numberOfProcs) {
       /* We are the last to syncronize */
       if (needGCTime (s)) {
-        stopWallTiming (&tv_sync, &s->cumulativeStatistics->tv_sync);
+        stopWallTiming (&tv_sync, &s->globalState.cumulativeStatistics->tv_sync);
         startWallTiming (&tv_serial);
       }
       Proc_criticalTicket = 0;
@@ -95,7 +95,7 @@ void Proc_endCriticalSection (__attribute__ ((unused)) GC_state s) {
       /* We are the last to finish */
 
       if (needGCTime (s))
-        stopWallTiming (&tv_serial, &s->cumulativeStatistics->tv_serial);
+        stopWallTiming (&tv_serial, &s->globalState.cumulativeStatistics->tv_serial);
 
       Proc_criticalCount = 0;
       Proc_criticalTicket = -1;

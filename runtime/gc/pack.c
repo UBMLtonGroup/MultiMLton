@@ -11,7 +11,7 @@ void GC_pack (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
   s->syncReason = SYNC_PACK;
   ENTER0 (s);
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Packing heap at "FMTPTR" of size %s bytes.]\n",
              (uintptr_t)(s->heap->start),
@@ -29,7 +29,7 @@ void GC_pack (__attribute__ ((unused)) GC_state *gs) {
     setGCStateCurrentThreadAndStack (s);
   }
   releaseHeap (s, s->secondaryLocalHeap);
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Packed heap at "FMTPTR" to size %s bytes.]\n",
              (uintptr_t)(s->heap->start),
@@ -41,7 +41,7 @@ void GC_unpack (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
   s->syncReason = SYNC_PACK;
   ENTER0 (s);
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Unpacking heap at "FMTPTR" of size %s bytes.]\n",
              (uintptr_t)(s->heap->start),
@@ -58,7 +58,7 @@ void GC_unpack (__attribute__ ((unused)) GC_state *gs) {
   setGCStateCurrentLocalHeap (s, 0, 0);
   setGCStateCurrentThreadAndStack (s);
   leaveGC (s);
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Unpacked heap at "FMTPTR" to size %s bytes.]\n",
              (uintptr_t)(s->heap->start),

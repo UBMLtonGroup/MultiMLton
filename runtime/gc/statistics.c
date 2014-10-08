@@ -16,34 +16,34 @@ void incSync (GC_state s) {
     case SYNC_SIGNALS:
       break;
     case SYNC_OLD_GEN_ARRAY:
-      s->cumulativeStatistics->syncForOldGenArray++;
+      s->globalState.cumulativeStatistics->syncForOldGenArray++;
       break;
     case SYNC_NEW_GEN_ARRAY:
-      s->cumulativeStatistics->syncForNewGenArray++;
+      s->globalState.cumulativeStatistics->syncForNewGenArray++;
       break;
     case SYNC_STACK:
-      s->cumulativeStatistics->syncForStack++;
+      s->globalState.cumulativeStatistics->syncForStack++;
       break;
     case SYNC_HEAP:
-      s->cumulativeStatistics->syncForHeap++;
+      s->globalState.cumulativeStatistics->syncForHeap++;
       break;
     case SYNC_FORCE:
-      s->cumulativeStatistics->syncForce++;
+      s->globalState.cumulativeStatistics->syncForce++;
       break;
     case SYNC_LIFT:
-      s->cumulativeStatistics->syncForLift++;
+      s->globalState.cumulativeStatistics->syncForLift++;
       break;
     case SYNC_PACK:
-      s->cumulativeStatistics->syncMisc++;
+      s->globalState.cumulativeStatistics->syncMisc++;
       break;
     case SYNC_SAVE_WORLD:
-      s->cumulativeStatistics->syncMisc++;
+      s->globalState.cumulativeStatistics->syncMisc++;
       break;
     case SYNC_MISC:
-      s->cumulativeStatistics->syncMisc++;
+      s->globalState.cumulativeStatistics->syncMisc++;
       break;
     case SYNC_LIFT_NO_GC:
-      s->cumulativeStatistics->syncForLiftNoGC++;
+      s->globalState.cumulativeStatistics->syncForLiftNoGC++;
       break;
     case SYNC_HELP:
       break;

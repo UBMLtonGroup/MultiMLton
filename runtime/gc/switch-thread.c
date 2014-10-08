@@ -20,12 +20,12 @@ void switchToThread (GC_state s, objptr op) {
              op, (uintmax_t)stack->used, (uintmax_t)stack->reserved);
   }
   s->currentThread = op;
-  s->sessionStart = s->frontier;
+  s->globalState.sessionStart = s->frontier;
   setGCStateCurrentThreadAndStack (s);
 }
 
 void GC_switchToThread (GC_state s, pointer p, size_t ensureBytesFree) {
-  if (DEBUG_THREADS or s->controls->messages)
+  if (DEBUG_THREADS or s->globalState.controls->messages)
     fprintf (stderr, "GC_switchToThread ("FMTPTR", %zu) [%d]\n",
              (uintptr_t)p, ensureBytesFree, Proc_processorNumber (s));
   if (TRUE) {

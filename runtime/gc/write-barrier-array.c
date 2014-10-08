@@ -12,10 +12,10 @@
 //preemptOnWB queue is not empty
 void liftAllObjptrsInMoveOnWBA (GC_state s) {
 
-  s->cumulativeStatistics->numPreemptGC += s->preemptOnWBASize;
+  s->globalState.cumulativeStatistics->numPreemptGC += s->preemptOnWBASize;
   if (s->schedulerQueue) {
-    s->cumulativeStatistics->numReadyPrimGC += sizeofSchedulerQueue (s, 0);
-    s->cumulativeStatistics->numReadySecGC += sizeofSchedulerQueue (s, 1);
+    s->globalState.cumulativeStatistics->numReadyPrimGC += sizeofSchedulerQueue (s, 0);
+    s->globalState.cumulativeStatistics->numReadySecGC += sizeofSchedulerQueue (s, 1);
   }
 
 
@@ -55,7 +55,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
     /* If I am placing a thread on another core, the thread must reside
      * in the shared heap. So Lift it.
      */
-    if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
+    if (proc != (int)s->procId && !(isObjptrInHeap (s, s->globalState.sharedHeap, op))) {
       if (DEBUG_SQ)
         fprintf (stderr, "moving closure to shared heap[%d]\n",
                  s->procId);
@@ -66,7 +66,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
 
     }
 
-    GC_sqEnque (s, objptrToPointer (op, s->sharedHeap->start), proc, 0);
+    GC_sqEnque (s, objptrToPointer (op, s->globalState.sharedHeap->start), proc, 0);
 
     i++;
   }
@@ -74,7 +74,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
 }
 
 void GC_addToMoveOnWBA (GC_state s, pointer p) {
-  s->cumulativeStatistics->numMoveWB++;
+  s->globalState.cumulativeStatistics->numMoveWB++;
   ++(s->moveOnWBASize);
   if (s->moveOnWBASize > s->moveOnWBAMaxSize) {
     s->moveOnWBAMaxSize *= 2;
@@ -107,8 +107,8 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
 
   if (isClosureClean) {
     pointer newP = GC_moveWithCopyType (s, p, FALSE, TRUE, FALSE);
-    foreachObjectInRange (s, s->sessionStart, s->frontier, foreachObjptrInUnforwardedObject, TRUE);
-    s->sessionStart = s->frontier;
+    foreachObjectInRange (s, s->globalState.sessionStart, s->frontier, foreachObjptrInUnforwardedObject, TRUE);
+    s->globalState.sessionStart = s->frontier;
     GC_sqEnque (s, newP, proc, 0);
     return;
   }
@@ -123,7 +123,7 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   s->spawnOnWBA[s->spawnOnWBASize - 1].op = pointerToObjptr (p, s->heap->start);
   s->spawnOnWBA[s->spawnOnWBASize - 1].proc = proc;
 
-  if (s->spawnOnWBASize > 16 && s->controls->useIdentityForCleanliness)
+  if (s->spawnOnWBASize > 16 && s->globalState.controls->useIdentityForCleanliness)
     forceLocalGC (s);
 }
 
@@ -131,9 +131,9 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
 void GC_addToPreemptOnWBA (GC_state s, pointer p, int kind) {
   assert (kind == 0 or kind == 1);
 
-  s->cumulativeStatistics->numPreemptWB++;
-  s->cumulativeStatistics->numReadyPrimWB += sizeofSchedulerQueue (s, 0);
-  s->cumulativeStatistics->numReadySecWB += sizeofSchedulerQueue (s, 1);
+  s->globalState.cumulativeStatistics->numPreemptWB++;
+  s->globalState.cumulativeStatistics->numReadyPrimWB += sizeofSchedulerQueue (s, 0);
+  s->globalState.cumulativeStatistics->numReadySecWB += sizeofSchedulerQueue (s, 1);
 
   objptr op = pointerToObjptr (p, s->heap->start);
   ++(s->preemptOnWBASize);

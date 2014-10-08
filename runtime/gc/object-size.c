@@ -42,7 +42,7 @@ size_t sizeofObject (GC_state s, pointer p) {
                "sizeOfObject saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);
     objptr op = *((objptr*)p);
-    p = objptrToPointer (op, s->sharedHeap->start);
+    p = objptrToPointer (op, s->globalState.sharedHeap->start);
     header = getHeader (p);
   }
   while ((header & 1) == 0) {
@@ -97,7 +97,7 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
                "sizeOfObjectNoHeader saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);
     objptr op = *((objptr*)p);
-    p = objptrToPointer (op, s->sharedHeap->start);
+    p = objptrToPointer (op, s->globalState.sharedHeap->start);
     header = getHeader (p);
   }
   while ((header & 1) == 0) {

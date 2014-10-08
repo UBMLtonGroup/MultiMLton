@@ -14,8 +14,8 @@ bool isPointerInHeap (__attribute__ ((unused)) GC_state s, GC_heap h, pointer p)
 bool isPointerInOldGen (GC_state s, GC_heap h, pointer p) {
   return (not (isPointer (p))
           or (h->kind==SHARED_HEAP ?
-              (s->sharedHeap->start <= p and
-                    p < s->sharedHeap->start + s->sharedHeap->oldGenSize) :
+              (s->globalState.sharedHeap->start <= p and
+                    p < s->globalState.sharedHeap->start + s->globalState.sharedHeap->oldGenSize) :
               (s->heap->start <= p and
                     p < s->heap->start + s->heap->oldGenSize)));
 }
@@ -23,7 +23,7 @@ bool isPointerInOldGen (GC_state s, GC_heap h, pointer p) {
 bool isPointerInNursery (GC_state s, GC_heap h, pointer p) {
   return (not (isPointer (p))
           or (h->kind==SHARED_HEAP ?
-             (s->sharedHeap->nursery <= p and p < s->sharedHeap->frontier) :
+             (s->globalState.sharedHeap->nursery <= p and p < s->globalState.sharedHeap->frontier) :
              (s->heap->nursery <= p and p < s->heap->frontier)));
 }
 
@@ -81,10 +81,10 @@ bool hasHeapBytesFree (GC_state s, GC_heap h, size_t oldGen, size_t nursery) {
                s->procId);
   }
   else {
-    total = s->sharedHeap->oldGenSize + oldGen + (s->canMinor ? 2 : 1) * (s->sharedHeap->frontier - s->sharedHeap->nursery);
-    res = (total <= s->sharedHeap->availableSize) and
-          (s->sharedHeap->start + s->sharedHeap->oldGenSize + oldGen <= s->sharedHeap->nursery) and
-          (nursery <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
+    total = s->globalState.sharedHeap->oldGenSize + oldGen + (s->canMinor ? 2 : 1) * (s->globalState.sharedHeap->frontier - s->globalState.sharedHeap->nursery);
+    res = (total <= s->globalState.sharedHeap->availableSize) and
+          (s->globalState.sharedHeap->start + s->globalState.sharedHeap->oldGenSize + oldGen <= s->globalState.sharedHeap->nursery) and
+          (nursery <= (size_t)(s->sharedLimitPlusSlop - s->globalState.sharedFrontier));
     if (DEBUG_DETAILED)
       fprintf (stderr, "%s = hasBytesFree in sharedHeap (%s, %s)\n",
               boolToString (res),
@@ -110,7 +110,7 @@ static inline bool isObjectLifted (GC_header header) {
 
 bool isPointerInAnyLocalHeap (GC_state s, pointer p) {
   for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
+    GC_state r = &s->globalState.procStates[proc];
     if (isPointerInHeap (r, r->heap, p))
       return TRUE;
   }

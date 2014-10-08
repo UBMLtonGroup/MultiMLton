@@ -103,10 +103,10 @@ void GC_sqCreateQueues (GC_state s) {
     schedulerLocks[proc].id = -1;
     schedulerLocks[proc].count = 0;
   }
-  if (s->procStates) {
+  if (s->globalState.procStates) {
     for (int proc=0; proc < s->numberOfProcs; proc++) {
-      s->procStates[proc].schedulerQueue = newSchedulerQueue ();
-      s->procStates[proc].schedulerLocks = schedulerLocks;
+      s->globalState.procStates[proc].schedulerQueue = newSchedulerQueue ();
+      s->globalState.procStates[proc].schedulerLocks = schedulerLocks;
     }
   }
   else {
@@ -121,9 +121,9 @@ void sqEnque (GC_state s, pointer p, int proc, int i) {
               (uintptr_t)p, proc, i, s->procId);
 
   assert (p);
-  GC_state fromProc = &s->procStates[proc];
+  GC_state fromProc = &s->globalState.procStates[proc];
   objptr op = pointerToObjptr (p, fromProc->heap->start);
-  assert (isPointerInHeap (s, s->sharedHeap, p) or
+  assert (isPointerInHeap (s, s->globalState.sharedHeap, p) or
           ((int)s->procId == proc));
 
   CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
@@ -144,7 +144,7 @@ void sqEnque (GC_state s, pointer p, int proc, int i) {
 
 void GC_addToDirectCloXferArray (GC_state s, ClosureToSpawn c, int proc) {
   GC_sqAcquireLock (s, proc);
-  utarray_push_back (s->procStates[proc].directCloXferArray, &c);
+  utarray_push_back (s->globalState.procStates[proc].directCloXferArray, &c);
   GC_sqReleaseLock (s, proc);
   Parallel_wakeUpThread (proc, 1);
 }
@@ -191,7 +191,7 @@ pointer GC_sqDeque (GC_state s, int i) {
     fprintf (stderr, "GC_sqDeque p="FMTPTR" proc=%d q=%d [%d]\n",
              (uintptr_t)res, s->procId, i, s->procId);
 
-  assert (isPointerInHeap (s, s->heap, res) || isPointerInHeap (s, s->sharedHeap, res));
+  assert (isPointerInHeap (s, s->heap, res) || isPointerInHeap (s, s->globalState.sharedHeap, res));
 
   return res;
 }
@@ -277,7 +277,7 @@ bool GC_sqIsEmpty (GC_state s) {
 }
 
 void GC_sqClean (GC_state s) {
-  assert (s->procStates);
+  assert (s->globalState.procStates);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     CircularBufferClean (s->schedulerQueue->primary);
     CircularBufferClean (s->schedulerQueue->secondary);

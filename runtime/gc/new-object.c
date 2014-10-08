@@ -27,16 +27,16 @@ pointer newObject (GC_state s,
   if (allocInOldGen) {
     frontier = s->heap->start + s->heap->oldGenSize;
     s->heap->oldGenSize += bytesRequested;
-    s->cumulativeStatistics->bytesAllocated += bytesRequested;
+    s->globalState.cumulativeStatistics->bytesAllocated += bytesRequested;
   }
   else if (allocInSharedHeap) {
     allocChunkInSharedHeap (s, bytesRequested);
     if (DEBUG_DETAILED)
       fprintf (stderr, "sharedFrontier changed from "FMTPTR" to "FMTPTR"\n",
-               (uintptr_t)s->sharedFrontier,
-               (uintptr_t)(s->sharedFrontier + bytesRequested));
-    frontier = s->sharedFrontier;
-    s->sharedFrontier += bytesRequested;
+               (uintptr_t)s->globalState.sharedFrontier,
+               (uintptr_t)(s->globalState.sharedFrontier + bytesRequested));
+    frontier = s->globalState.sharedFrontier;
+    s->globalState.sharedFrontier += bytesRequested;
   }
   else {
     if (DEBUG_DETAILED)
@@ -69,14 +69,14 @@ GC_stack newStack (GC_state s,
 
   assert (isStackReservedAligned (s, reserved));
   /* XXX unsafe concurrent access */
-  if (reserved > s->cumulativeStatistics->maxStackSize)
-    s->cumulativeStatistics->maxStackSize = reserved;
+  if (reserved > s->globalState.cumulativeStatistics->maxStackSize)
+    s->globalState.cumulativeStatistics->maxStackSize = reserved;
 
   /* Statistics */
-  s->cumulativeStatistics->bytesThreadReserved += reserved;
-  s->cumulativeStatistics->countThreadReserved++;
-  s->cumulativeStatistics->bytesThreadUsed += reserved;
-  s->cumulativeStatistics->countThreadUsed++;
+  s->globalState.cumulativeStatistics->bytesThreadReserved += reserved;
+  s->globalState.cumulativeStatistics->countThreadReserved++;
+  s->globalState.cumulativeStatistics->bytesThreadUsed += reserved;
+  s->globalState.cumulativeStatistics->countThreadUsed++;
 
   stack = (GC_stack)(newObject (s, GC_STACK_HEADER,
                                 sizeofStackWithHeader (s, reserved),
@@ -123,7 +123,7 @@ static inline void setFrontier (GC_state s, pointer p,
   assert ((size_t)(p - s->frontier) <= bytes);
   GC_profileAllocInc (s, p - s->frontier);
   /* XXX unsafe concurrent access */
-  s->cumulativeStatistics->bytesAllocated += p - s->frontier;
+  s->globalState.cumulativeStatistics->bytesAllocated += p - s->frontier;
   s->frontier = p;
   assert (s->frontier <= s->limitPlusSlop);
   assert (s->start <= s->frontier);
@@ -132,11 +132,11 @@ static inline void setFrontier (GC_state s, pointer p,
 static inline void setSharedFrontier (GC_state s, pointer p,
                                 __attribute__ ((unused)) size_t bytes) {
   p = alignFrontier (s, p);
-  assert ((size_t)(p - s->sharedFrontier) <= bytes);
-  GC_profileAllocInc (s, p - s->sharedFrontier);
+  assert ((size_t)(p - s->globalState.sharedFrontier) <= bytes);
+  GC_profileAllocInc (s, p - s->globalState.sharedFrontier);
   /* XXX unsafe concurrent access */
-  s->cumulativeStatistics->bytesAllocated += p - s->sharedFrontier;
-  s->sharedFrontier = p;
-  assert (s->sharedFrontier <= s->sharedLimitPlusSlop);
-  assert (s->sharedStart <= s->sharedFrontier);
+  s->globalState.cumulativeStatistics->bytesAllocated += p - s->globalState.sharedFrontier;
+  s->globalState.sharedFrontier = p;
+  assert (s->globalState.sharedFrontier <= s->sharedLimitPlusSlop);
+  assert (s->sharedStart <= s->globalState.sharedFrontier);
 }

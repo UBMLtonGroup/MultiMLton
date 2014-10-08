@@ -88,7 +88,7 @@ void runProfHandler (void* arg) {                                       \
                 fprintf (stderr, "Wait for prof timer\n");              \
             sigwait (&set, &signum);                                    \
             for (int proc = 0; proc < s->numberOfProcs; proc++) {       \
-               GC_state gcState = &s->procStates[proc];                 \
+               GC_state gcState = &s->globalState.procStates[proc];                 \
                if (gcState->profiling.isProfilingTimeOn)                \
                  pthread_kill (gcState->pthread, SIGUSR1);              \
            }                                                            \
@@ -130,7 +130,7 @@ void runAlrmHandler (void *arg) {                                       \
         sigemptyset (&set);                                             \
         sigaddset (&set, SIGALRM);                                      \
                                                                         \
-        GC_state gcState0 = &s->procStates[0];                          \
+        GC_state gcState0 = &s->globalState.procStates[0];                          \
         sigaddset(&gcState0->signalsInfo.signalsHandled, SIGALRM);      \
                                                                         \
         while (1) {                                                     \
@@ -141,7 +141,7 @@ void runAlrmHandler (void *arg) {                                       \
                                                                         \
             /* set up switches if GC_state is registered for an alrm */ \
             for (int proc = 0; proc < s->numberOfProcs; proc++) {       \
-                GC_state gcState = &s->procStates[proc];                \
+                GC_state gcState = &s->globalState.procStates[proc];                \
                 if (DEBUG_ALRM)                                         \
                 {                                                       \
                     fprintf(stderr,"Got an ALRM\n");                    \
@@ -194,8 +194,8 @@ void run (void *arg) {                                                  \
         signal (SIGABRT, segvHandler);                                  \
         GC_state s = (GC_state)arg;                                     \
         uint32_t num = Proc_processorNumber (s)                         \
-                * s->controls->affinityStride                           \
-                + s->controls->affinityBase;                            \
+                * s->globalState.controls->affinityStride                           \
+                + s->globalState.controls->affinityBase;                            \
          int numCompute = s->numberOfProcs - s->numIOThreads;           \
          set_cpu_affinity(num);                                         \
                                                                         \
@@ -259,14 +259,14 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
                 }                                                       \
                 /* Now copy initialization to the first processor state */      \
                 memcpy (&gcState[0], &s, sizeof (struct GC_state));     \
-                gcState[0].procStates = gcState;                        \
+                gcState[0].globalState.procStates = gcState;                        \
                 gcState[0].procId = 0;                                  \
                 GC_lateInit (&gcState[0]);                              \
         }                                                               \
         /* Fill in per-processor data structures */                     \
         for (procNo = 1; procNo <= gcState[0].numberOfProcs; procNo++) { \
                 Duplicate (&gcState[procNo], &gcState[0]);              \
-                gcState[procNo].procStates = gcState;                   \
+                gcState[procNo].globalState.procStates = gcState;                   \
                 gcState[procNo].procId = procNo;                        \
                 if (procNo == gcState[0].numberOfProcs)                 \
                     gcState[procNo].atomicState = 0;                    \

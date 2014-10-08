@@ -36,17 +36,17 @@ PRIVATE Pointer gcStateAddress;
 #define Initialize(s, al, mg, mfs, mmc, pk, ps, gnr)              \
         gcStateAddress = (pointer)&s;                             \
         s.alignment = al;                                         \
-        s.atMLtons = atMLtons;                                    \
-        s.atMLtonsLength = cardof(atMLtons);                      \
+        s.globalState.atMLtons = atMLtons;                                    \
+        s.globalState.atMLtonsLength = cardof(atMLtons);                      \
         s.frameLayouts = frameLayouts;                            \
         s.frameLayoutsLength = cardof(frameLayouts);              \
         s.globals = (objptr*)globalObjptr;                        \
         s.globalsLength = cardof(globalObjptr);                   \
         s.intInfInits = intInfInits;                              \
         s.intInfInitsLength = cardof(intInfInits);                \
-        s.loadGlobals = loadGlobals;                              \
-        s.magic = mg;                                             \
-        s.maxFrameSize = mfs;                                     \
+        s.globalState.loadGlobals = loadGlobals;                              \
+        s.globalState.magic = mg;                                             \
+        s.globalState.maxFrameSize = mfs;                                     \
         s.mutatorMarksCards = mmc;                                \
         s.objectTypes = objectTypes;                              \
         s.objectTypesLength = cardof(objectTypes);                \
@@ -79,17 +79,17 @@ static void MLton_callFromC ();
 void Duplicate (GC_state d, GC_state s) {
   // Initialize
   d->alignment = s->alignment;
-  d->atMLtons = s->atMLtons;
-  d->atMLtonsLength = s->atMLtonsLength;
+  d->globalState.atMLtons = s->globalState.atMLtons;
+  d->globalState.atMLtonsLength = s->globalState.atMLtonsLength;
   d->frameLayouts = s->frameLayouts;
   d->frameLayoutsLength = s->frameLayoutsLength;
   d->globals = s->globals;
   d->globalsLength = s->globalsLength;
   d->intInfInits = s->intInfInits;
   d->intInfInitsLength = s->intInfInitsLength;
-  d->loadGlobals = s->loadGlobals;
-  d->magic = s->magic;
-  d->maxFrameSize = s->maxFrameSize;
+  d->globalState.loadGlobals = s->globalState.loadGlobals;
+  d->globalState.magic = s->globalState.magic;
+  d->globalState.maxFrameSize = s->globalState.maxFrameSize;
   d->mutatorMarksCards = s->mutatorMarksCards;
   d->objectTypes = s->objectTypes;
   d->objectTypesLength = s->objectTypesLength;

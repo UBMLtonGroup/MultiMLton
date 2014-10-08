@@ -55,10 +55,10 @@ void swapHeapsForCheneyCopy (GC_state s) {
 void swapHeapsForSharedCheneyCopy (GC_state s) {
   GC_heap tempHeap;
   for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    tempHeap = s->procStates[proc].secondarySharedHeap;
-    s->procStates[proc].secondarySharedHeap =
-        s->procStates[proc].sharedHeap;
-    s->procStates[proc].sharedHeap = tempHeap;
+    tempHeap = s->globalState.procStates[proc].globalState.secondarySharedHeap;
+    s->globalState.procStates[proc].globalState.secondarySharedHeap =
+        s->globalState.procStates[proc].globalState.sharedHeap;
+    s->globalState.procStates[proc].globalState.sharedHeap = tempHeap;
   }
 }
 
@@ -70,9 +70,9 @@ void majorCheneyCopyGC (GC_state s) {
   assert (s->secondaryLocalHeap->size >= s->heap->oldGenSize);
   if (detailedGCTime (s))
     startTiming (&ru_start);
-  s->cumulativeStatistics->numCopyingGCs++;
+  s->globalState.cumulativeStatistics->numCopyingGCs++;
   s->forwardState.amInMinorGC = FALSE;
-  if (DEBUG or s->controls->messages) {
+  if (DEBUG or s->globalState.controls->messages) {
     fprintf (stderr,
              "[GC: Starting major Cheney-copy] [%d]\n", s->procId);
     fprintf (stderr,
@@ -101,12 +101,12 @@ void majorCheneyCopyGC (GC_state s) {
   updateWeaksForCheneyCopy (s);
   s->secondaryLocalHeap->oldGenSize = s->forwardState.back - s->secondaryLocalHeap->start;
   bytesCopied = s->secondaryLocalHeap->oldGenSize;
-  s->cumulativeStatistics->bytesCopied += bytesCopied;
+  s->globalState.cumulativeStatistics->bytesCopied += bytesCopied;
   swapHeapsForCheneyCopy (s);
   s->lastMajorStatistics->kind = GC_COPYING;
   if (detailedGCTime (s))
-    stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopying);
-  if (DEBUG or s->controls->messages)
+    stopTiming (&ru_start, &s->globalState.cumulativeStatistics->ru_gcCopying);
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Finished major Cheney-copy; copied %s bytes.] [%d]\n",
              uintmaxToCommaString(bytesCopied), s->procId);
@@ -117,43 +117,43 @@ void majorCheneyCopySharedGC (GC_state s) {
   struct rusage ru_start;
   pointer toStart;
 
-  assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
+  assert (s->globalState.secondarySharedHeap->size >= s->globalState.sharedHeap->oldGenSize);
   if (detailedGCTime (s))
     startTiming (&ru_start);
-  s->cumulativeStatistics->numCopyingSharedGCs++;
+  s->globalState.cumulativeStatistics->numCopyingSharedGCs++;
   s->forwardState.amInMinorGC = FALSE;
-  if (DEBUG or s->controls->messages) {
+  if (DEBUG or s->globalState.controls->messages) {
     fprintf (stderr,
              "[GC: Starting shared major Cheney-copy] [%d]\n", s->procId);
     fprintf (stderr,
              "[GC:\tfrom heap at "FMTPTR" of size %s bytes,] [%d]\n",
-             (uintptr_t)(s->sharedHeap->start),
-             uintmaxToCommaString(s->sharedHeap->size), s->procId);
+             (uintptr_t)(s->globalState.sharedHeap->start),
+             uintmaxToCommaString(s->globalState.sharedHeap->size), s->procId);
     fprintf (stderr,
              "[GC:\tto heap at "FMTPTR" of size %s bytes.] [%d]\n",
-             (uintptr_t)(s->secondarySharedHeap->start),
-             uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
+             (uintptr_t)(s->globalState.secondarySharedHeap->start),
+             uintmaxToCommaString(s->globalState.secondarySharedHeap->size), s->procId);
   }
 
   //Set up forwarding state
-  toStart = alignFrontier (s, s->secondarySharedHeap->start);
+  toStart = alignFrontier (s, s->globalState.secondarySharedHeap->start);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    s->procStates[proc].forwardState.toStart = s->secondarySharedHeap->start;
-    s->procStates[proc].forwardState.toLimit =
-      s->secondarySharedHeap->start + s->secondarySharedHeap->size;
-    s->procStates[proc].forwardState.back = toStart;
-    s->procStates[proc].forwardState.forceStackForwarding = TRUE;
+    s->globalState.procStates[proc].forwardState.toStart = s->globalState.secondarySharedHeap->start;
+    s->globalState.procStates[proc].forwardState.toLimit =
+      s->globalState.secondarySharedHeap->start + s->globalState.secondarySharedHeap->size;
+    s->globalState.procStates[proc].forwardState.back = toStart;
+    s->globalState.procStates[proc].forwardState.forceStackForwarding = TRUE;
 
-    assert (!s->procStates[proc].forwardState.rangeListCurrent);
-    assert (!s->procStates[proc].forwardState.rangeListFirst);
-    assert (!s->procStates[proc].forwardState.rangeListLast);
+    assert (!s->globalState.procStates[proc].forwardState.rangeListCurrent);
+    assert (!s->globalState.procStates[proc].forwardState.rangeListFirst);
+    assert (!s->globalState.procStates[proc].forwardState.rangeListLast);
   }
-  assert (s->secondarySharedHeap->start);
-  assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
+  assert (s->globalState.secondarySharedHeap->start);
+  assert (s->globalState.secondarySharedHeap->size >= s->globalState.sharedHeap->oldGenSize);
 
   // Walk the local heaps and forward objptrs
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &(s->procStates[proc]);
+    GC_state r = &(s->globalState.procStates[proc]);
     if (DEBUG_DETAILED)
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
                proc);
@@ -172,7 +172,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     callIfIsObjptr (r, forwardObjptrForSharedCheneyCopy, &r->forwardState.liftingObject);
     pointer back = r->forwardState.back;
     for (int i=0; i < s->numberOfProcs; i++)
-      s->procStates[i].forwardState.back = back;
+      s->globalState.procStates[i].forwardState.back = back;
   }
 
   //Forward Globals -- must come after walking local heaps for correct forwarding state
@@ -187,21 +187,21 @@ void majorCheneyCopySharedGC (GC_state s) {
               s->procId);
 
   updateWeaksForCheneyCopy (s);
-  s->secondarySharedHeap->oldGenSize = s->forwardState.back - s->secondarySharedHeap->start;
-  bytesCopied = s->secondarySharedHeap->oldGenSize;
-  s->cumulativeStatistics->bytesCopiedShared += bytesCopied;
+  s->globalState.secondarySharedHeap->oldGenSize = s->forwardState.back - s->globalState.secondarySharedHeap->start;
+  bytesCopied = s->globalState.secondarySharedHeap->oldGenSize;
+  s->globalState.cumulativeStatistics->bytesCopiedShared += bytesCopied;
   swapHeapsForSharedCheneyCopy (s);
   s->lastSharedMajorStatistics->kind = GC_COPYING;
   if (detailedGCTime (s))
-    stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopyingShared);
+    stopTiming (&ru_start, &s->globalState.cumulativeStatistics->ru_gcCopyingShared);
 
   #if 0
   fprintf (stderr, "DEBUG MODE CHECK\n");
   if (DEBUG)
     fprintf (stderr, "Starting shared heap checks [%d]\n", s->procId);
 
-  pointer end = s->sharedHeap->start + s->sharedHeap->oldGenSize;
-  foreachObjptrInRange (s, s->sharedHeap->start, &end, assertLiftedObjptr, TRUE);
+  pointer end = s->globalState.sharedHeap->start + s->globalState.sharedHeap->oldGenSize;
+  foreachObjptrInRange (s, s->globalState.sharedHeap->start, &end, assertLiftedObjptr, TRUE);
 
   if (DEBUG)
     fprintf (stderr, "Ending shared heap checks [%d]\n", s->procId);
@@ -210,7 +210,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     if (DEBUG)
       fprintf (stderr, "Starting local heap %d check [%d]\n", proc, s->procId);
 
-    GC_state r = &s->procStates[proc];
+    GC_state r = &s->globalState.procStates[proc];
     end = r->heap->start + r->heap->oldGenSize;
     foreachObjptrInRange (r, r->heap->start, &end, assertIsObjptrInFromSpaceOrLifted, TRUE);
     foreachObjptrInRange (r, r->heap->nursery, &r->frontier, assertIsObjptrInFromSpaceOrLifted, TRUE);
@@ -220,7 +220,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   }
   #endif
 
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Finished shared major Cheney-copy; copied %s bytes.] [%d]\n",
              uintmaxToCommaString(bytesCopied), s->procId);
@@ -260,9 +260,9 @@ void minorCheneyCopyGC (GC_state s) {
   } else {
     if (detailedGCTime (s))
       startTiming (&ru_start);
-    s->cumulativeStatistics->numMinorGCs++;
+    s->globalState.cumulativeStatistics->numMinorGCs++;
     s->forwardState.amInMinorGC = TRUE;
-    if (DEBUG_GENERATIONAL or s->controls->messages) {
+    if (DEBUG_GENERATIONAL or s->globalState.controls->messages) {
       fprintf (stderr,
                "[GC: Starting minor Cheney-copy;]\n");
       fprintf (stderr,
@@ -284,17 +284,17 @@ void minorCheneyCopyGC (GC_state s) {
                           forwardObjptrIfInNursery, TRUE);
     updateWeaksForCheneyCopy (s);
     bytesCopied = s->forwardState.back - s->forwardState.toStart;
-    s->cumulativeStatistics->bytesCopiedMinor += bytesCopied;
+    s->globalState.cumulativeStatistics->bytesCopiedMinor += bytesCopied;
     s->heap->oldGenSize += bytesCopied;
     s->lastMajorStatistics->numMinorGCs++;
     if (detailedGCTime (s))
-      stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcMinor);
-    if (DEBUG_GENERATIONAL or s->controls->messages)
+      stopTiming (&ru_start, &s->globalState.cumulativeStatistics->ru_gcMinor);
+    if (DEBUG_GENERATIONAL or s->globalState.controls->messages)
       fprintf (stderr,
                "[GC: Finished minor Cheney-copy; copied %s bytes.]\n",
                uintmaxToCommaString(bytesCopied));
   }
   bytesAllocated -= bytesFilled;
-  s->cumulativeStatistics->bytesAllocated += bytesAllocated;
-  s->cumulativeStatistics->bytesFilled += bytesFilled;
+  s->globalState.cumulativeStatistics->bytesAllocated += bytesAllocated;
+  s->globalState.cumulativeStatistics->bytesFilled += bytesFilled;
 }

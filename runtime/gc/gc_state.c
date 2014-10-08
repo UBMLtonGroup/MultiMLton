@@ -8,7 +8,7 @@
 
 GC_state getGCStateFromPointer (GC_state s, pointer p) {
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
+    GC_state r = &s->globalState.procStates[proc];
     if (isPointerInHeap (r, r->heap, p))
       return r;
   }
@@ -96,7 +96,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
       /* The nursery is large enough to be worth it. */
       and (((float)(h->size - s->lastMajorStatistics->bytesLive)
             / (float)nurserySize)
-           <= s->controls->ratios.nursery)
+           <= s->globalState.controls->ratios.nursery)
       and /* There is a reason to use generational GC. */
       (
        /* We must use it for debugging purposes. */
@@ -106,8 +106,8 @@ void setGCStateCurrentLocalHeap (GC_state s,
        /* The live ratio is low enough to make it worthwhile. */
        or ((float)h->size / (float)s->lastMajorStatistics->bytesLive
            <= (h->withMapsSize < s->sysvals.ram
-               ? s->controls->ratios.copyGenerational
-               : s->controls->ratios.markCompactGenerational))
+               ? s->globalState.controls->ratios.copyGenerational
+               : s->globalState.controls->ratios.markCompactGenerational))
       )) {
     s->canMinor = TRUE;
     nursery = genNursery;
@@ -120,7 +120,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
   }
   assert (nurseryBytesRequested <= nurserySize);
   s->heap->nursery = nursery;
-  s->frontier = s->sessionStart = nursery;
+  s->frontier = s->globalState.sessionStart = nursery;
   s->start = nursery;
   h->frontier = s->limitPlusSlop;
   assert (s->heap->start + s->heap->oldGenSize <= s->heap->nursery);
@@ -146,8 +146,8 @@ void setGCStateCurrentSharedHeap (GC_state s,
     fprintf (stderr, "setGCStateCurrentSharedHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
-  h = s->sharedHeap;
-  assert (h==s->sharedHeap);
+  h = s->globalState.sharedHeap;
+  assert (h==s->globalState.sharedHeap);
   assert (isFrontierAligned (s, h->start + h->oldGenSize + oldGenBytesRequested));
   limit = h->start + h->size - bonus;
   nurserySize = h->size - (h->oldGenSize + oldGenBytesRequested) - bonus;
@@ -156,13 +156,13 @@ void setGCStateCurrentSharedHeap (GC_state s,
   genNursery = alignFrontier (s, limit - (nurserySize / 2));
   genNurserySize = limit - genNursery;
 
-  if (s->controls->restrictAvailableSize
+  if (s->globalState.controls->restrictAvailableSize
       and
-      (s->cumulativeStatistics->maxBytesLiveSinceReset > 0)) {
+      (s->globalState.cumulativeStatistics->maxBytesLiveSinceReset > 0)) {
     float actualRatio;
     h->availableSize =
-      (size_t)(s->controls->ratios.available
-               * s->cumulativeStatistics->maxBytesLiveSinceReset);
+      (size_t)(s->globalState.controls->ratios.available
+               * s->globalState.cumulativeStatistics->maxBytesLiveSinceReset);
 
     if ((h->oldGenSize + oldGenBytesRequested + nurserySize + bonus)
         > h->availableSize) {
@@ -189,13 +189,13 @@ void setGCStateCurrentSharedHeap (GC_state s,
     }
 
     actualRatio = (float)h->availableSize
-      / s->cumulativeStatistics->maxBytesLiveSinceReset;
-    if ((DEBUG or s->controls->messages)
+      / s->globalState.cumulativeStatistics->maxBytesLiveSinceReset;
+    if ((DEBUG or s->globalState.controls->messages)
         and
-        (actualRatio > s->controls->ratios.available)) {
+        (actualRatio > s->globalState.controls->ratios.available)) {
       fprintf (stderr,
                "[GC: Can't restrict available ratio to %f, using %f; worst-case max-live is %s bytes.]\n",
-               s->controls->ratios.available, actualRatio,
+               s->globalState.controls->ratios.available, actualRatio,
                uintmaxToCommaString(h->oldGenSize + oldGenBytesRequested + nurserySize));
     }
   }
@@ -205,24 +205,24 @@ void setGCStateCurrentSharedHeap (GC_state s,
   }
 
   assert (nurseryBytesRequested <= nurserySize);
-  s->sharedHeap->nursery = nursery;
+  s->globalState.sharedHeap->nursery = nursery;
   frontier = nursery;
 
   if (not duringInit) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       assert (isFrontierAligned (s, frontier));
-      s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
-      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
-        getThreadCurrent(&s->procStates[proc])->bytesNeeded;
-      s->procStates[proc].sharedLimit = s->procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
-      assert (s->procStates[proc].sharedFrontier <= s->procStates[proc].sharedLimitPlusSlop);
+      s->globalState.procStates[proc].sharedStart = s->globalState.procStates[proc].globalState.sharedFrontier = frontier;
+      s->globalState.procStates[proc].sharedLimitPlusSlop = s->globalState.procStates[proc].sharedStart +
+        getThreadCurrent(&s->globalState.procStates[proc])->bytesNeeded;
+      s->globalState.procStates[proc].globalState.sharedLimit = s->globalState.procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+      assert (s->globalState.procStates[proc].globalState.sharedFrontier <= s->globalState.procStates[proc].sharedLimitPlusSlop);
       /* XXX clearCardMap (?) */
 
       if (DEBUG)
         for (size_t i = 0; i < GC_BONUS_SLOP; i++)
-          *(s->procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
+          *(s->globalState.procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
 
-      frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
+      frontier = s->globalState.procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
   }
   else {
@@ -230,18 +230,18 @@ void setGCStateCurrentSharedHeap (GC_state s,
     /* XXX this is a lot of copy-paste */
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       assert (isFrontierAligned (s, frontier));
-      s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
-      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
+      s->globalState.procStates[proc].sharedStart = s->globalState.procStates[proc].globalState.sharedFrontier = frontier;
+      s->globalState.procStates[proc].sharedLimitPlusSlop = s->globalState.procStates[proc].sharedStart +
         GC_HEAP_LIMIT_SLOP;
-      s->procStates[proc].sharedLimit = s->procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
-      assert (s->procStates[proc].sharedFrontier <= s->procStates[proc].sharedLimitPlusSlop);
+      s->globalState.procStates[proc].globalState.sharedLimit = s->globalState.procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+      assert (s->globalState.procStates[proc].globalState.sharedFrontier <= s->globalState.procStates[proc].sharedLimitPlusSlop);
       /* XXX clearCardMap (?) */
 
       if (DEBUG)
         for (size_t i = 0; i < GC_BONUS_SLOP; i++)
-          *(s->procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
+          *(s->globalState.procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
 
-      frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
+      frontier = s->globalState.procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
   }
   h->frontier = frontier;
@@ -251,19 +251,19 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
   //Set sharedHeap limits in gcState
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    s->procStates[proc].sharedHeapStart = s->sharedHeap->start;
-    s->procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
+    s->globalState.procStates[proc].globalState.sharedHeapStart = s->globalState.sharedHeap->start;
+    s->globalState.procStates[proc].globalState.sharedHeapEnd = s->globalState.sharedHeap->start + s->globalState.sharedHeap->size;
   }
 
   if (not duringInit) {
-    assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasHeapBytesFree (s, s->sharedHeap, oldGenBytesRequested, getThreadCurrent(s)->bytesNeeded));
+    assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->globalState.sharedFrontier));
+    assert (hasHeapBytesFree (s, s->globalState.sharedHeap, oldGenBytesRequested, getThreadCurrent(s)->bytesNeeded));
   }
   else {
-    assert (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasHeapBytesFree (s, s->sharedHeap, oldGenBytesRequested, nurseryBytesRequested));
+    assert (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->globalState.sharedFrontier));
+    assert (hasHeapBytesFree (s, s->globalState.sharedHeap, oldGenBytesRequested, nurseryBytesRequested));
   }
-  assert (isFrontierAligned (s, s->sharedFrontier));
+  assert (isFrontierAligned (s, s->globalState.sharedFrontier));
 }
 
 bool GC_getIsPCML (void) {
@@ -283,42 +283,42 @@ void GC_setAmOriginal (__attribute__ ((unused)) GC_state *gs, bool b) {
 
 void GC_setControlsMessages (__attribute__ ((unused)) GC_state *gs, bool b) {
   GC_state s = pthread_getspecific (gcstate_key);
-  s->controls->messages = b;
+  s->globalState.controls->messages = b;
 }
 
 void GC_setControlsSummary (__attribute__ ((unused)) GC_state *gs, bool b) {
   GC_state s = pthread_getspecific (gcstate_key);
-  s->controls->summary = b;
+  s->globalState.controls->summary = b;
 }
 
 void GC_setControlsRusageMeasureGC (__attribute__ ((unused)) GC_state *gs, bool b) {
   GC_state s = pthread_getspecific (gcstate_key);
-  s->controls->rusageMeasureGC = b;
+  s->globalState.controls->rusageMeasureGC = b;
 }
 
 uintmax_t GC_getCumulativeStatisticsBytesAllocated (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
-  return s->cumulativeStatistics->bytesAllocated;
+  return s->globalState.cumulativeStatistics->bytesAllocated;
 }
 
 uintmax_t GC_getCumulativeStatisticsNumCopyingGCs (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
-  return s->cumulativeStatistics->numCopyingGCs;
+  return s->globalState.cumulativeStatistics->numCopyingGCs;
 }
 
 uintmax_t GC_getCumulativeStatisticsNumMarkCompactGCs (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
-  return s->cumulativeStatistics->numMarkCompactGCs;
+  return s->globalState.cumulativeStatistics->numMarkCompactGCs;
 }
 
 uintmax_t GC_getCumulativeStatisticsNumMinorGCs (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
-  return s->cumulativeStatistics->numMinorGCs;
+  return s->globalState.cumulativeStatistics->numMinorGCs;
 }
 
 size_t GC_getCumulativeStatisticsMaxBytesLive (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
-  return s->cumulativeStatistics->maxBytesLive;
+  return s->globalState.cumulativeStatistics->maxBytesLive;
 }
 
 void GC_setHashConsDuringGC (__attribute__ ((unused)) GC_state *gs, bool b) {
@@ -334,7 +334,7 @@ size_t GC_getLastMajorStatisticsBytesLive (__attribute__ ((unused)) GC_state *gs
 
 pointer GC_getCallFromCHandlerThread (__attribute__ ((unused)) GC_state *gs) {
   GC_state s = pthread_getspecific (gcstate_key);
-  pointer p = objptrToPointer (s->callFromCHandlerThread, s->heap->start);
+  pointer p = objptrToPointer (s->globalState.callFromCHandlerThread, s->heap->start);
   return p;
 }
 
@@ -342,7 +342,7 @@ void GC_setCallFromCHandlerThread (__attribute__ ((unused)) GC_state *gs,
                                    pointer p) {
   GC_state s = pthread_getspecific (gcstate_key);
   objptr op = pointerToObjptr (p, s->heap->start);
-  s->callFromCHandlerThread = op;
+  s->globalState.callFromCHandlerThread = op;
 }
 
 pointer GC_getCurrentThread (__attribute__ ((unused)) GC_state *gs) {
@@ -380,8 +380,8 @@ void GC_setSignalHandlerThread (__attribute__ ((unused)) GC_state *gs, pointer p
 
   /* Copy the mlton signal handler thread to all gcStates */
   for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    s->procStates[proc].signalHandlerThread =
-      pointerToObjptr( copyThreadTo (s, &s->procStates[proc],
+    s->globalState.procStates[proc].signalHandlerThread =
+      pointerToObjptr( copyThreadTo (s, &s->globalState.procStates[proc],
                                      objptrToPointer(s->signalHandlerThread,
                                                      s->heap->start)),
                        s->heap->start);
@@ -431,13 +431,13 @@ pointer GC_forwardBase (const GC_state s, const pointer p) {
   if (MEASURE_RB_CYCLE)
     rdtscll (start);
 
-  if (MEASURE_RB_MISS) s->cumulativeStatistics->numRBChecks++;
+  if (MEASURE_RB_MISS) s->globalState.cumulativeStatistics->numRBChecks++;
 
   if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute) {
     retP = p;
   }
   else if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
-    if (MEASURE_RB_MISS) s->cumulativeStatistics->numRBChecksForwarded++;
+    if (MEASURE_RB_MISS) s->globalState.cumulativeStatistics->numRBChecksForwarded++;
     if (DEBUG)
       fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
                (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
@@ -448,7 +448,7 @@ pointer GC_forwardBase (const GC_state s, const pointer p) {
   }
   if (MEASURE_RB_CYCLE) {
     rdtscll (end);
-    s->cumulativeStatistics->cyclesRB += (end-start);
+    s->globalState.cumulativeStatistics->cyclesRB += (end-start);
   }
   return retP;
 }
@@ -460,7 +460,7 @@ void GC_markCleanliness (const GC_state s, pointer target, pointer source,
   GC_numReferences oldCount, newCount;
 
   oldCount = getNumReferences (h);
-  if (target < s->sessionStart || target > s->limitPlusSlop)
+  if (target < s->globalState.sessionStart || target > s->limitPlusSlop)
     newCount = GLOBAL_MANY;
   else if (oldCount == ZERO)
     newCount = ONE;
@@ -482,10 +482,10 @@ void GC_markCleanliness (const GC_state s, pointer target, pointer source,
 
 void GC_commEvent (void) {
   GC_state s = pthread_getspecific (gcstate_key);
-  s->cumulativeStatistics->numComms++;
+  s->globalState.cumulativeStatistics->numComms++;
 }
 
 void GC_setSelectiveDebug (__attribute__((unused)) GC_state *gs, bool b) {
   GC_state s = pthread_getspecific (gcstate_key);
-  s->selectiveDebug = b;
+  s->globalState.selectiveDebug = b;
 }

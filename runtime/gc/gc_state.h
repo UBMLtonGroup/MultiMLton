@@ -13,135 +13,132 @@ struct GC_state {
    * referenced, and having them at smaller offsets may decrease code
    * size and improve cache performance.
    */
-  pointer frontier; /* start <= frontier < limit */
-  pointer limit; /* limit = heap->start + heap->size */
-  pointer stackTop; /* Top of stack in current thread. */
-  pointer stackLimit; /* stackBottom + stackSize - maxFrameSize */
-  pointer localHeapStart;
-  pointer sharedHeapStart;
-  pointer sharedHeapEnd;
-  pointer sessionStart;
-  struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
+  struct GC_state_global globalState;
 
-  /* ML arrays and queues */
-  SchedulerQueue* schedulerQueue;
-  Lock* schedulerLocks;
+  pointer frontier; /* start <= frontier < limit *///local
+    pointer limit; /* limit = heap->start + heap->size *///local
+    pointer stackTop; /* Top of stack in current thread. *///local
+    pointer stackLimit; /* stackBottom + stackSize - maxFrameSize *///local
+    pointer localHeapStart;//local
 
-  objptr* moveOnWBA;
-  int32_t moveOnWBASize;
-  int32_t moveOnWBAMaxSize;
 
-  PreemptThread* preemptOnWBA;
-  int32_t preemptOnWBASize;
-  int32_t preemptOnWBAMaxSize;
 
-  objptr* danglingStackList;
-  int32_t danglingStackListSize;
-  int32_t danglingStackListMaxSize;
+    struct GC_generationalMaps generationalMaps; /* generational maps for this heap *///local
 
-  SpawnThread* spawnOnWBA;
-  int32_t spawnOnWBASize;
-  int32_t spawnOnWBAMaxSize;
+    /* ML arrays and queues */
+    SchedulerQueue* schedulerQueue;//local
+    Lock* schedulerLocks;//local
 
-  pointer sharedFrontier;
-  pointer sharedLimit;
-  bool tmpBool;
-  pointer tmpPointer;
-  int32_t tmpInt;
-  size_t exnStack;
+    objptr* moveOnWBA;//local
+    int32_t moveOnWBASize;//local
+    int32_t moveOnWBAMaxSize;//local
 
-  /* Alphabetized fields follow. */
-  size_t alignment; /* */
-  bool amInGC;
-  bool amOriginal;
-  uint32_t procId;
-  char **atMLtons; /* Initial @MLton args, processed before command line. */
-  uint32_t atMLtonsLength;
-  uint32_t atomicState;
-  objptr callFromCHandlerThread; /* Handler for exported C calls (in heap). */
-  struct GC_callStackState callStackState;
-  bool canMinor; /* TRUE iff there is space for a minor gc. */
-  struct GC_controls *controls;
-  struct GC_cumulativeStatistics *cumulativeStatistics;
-  objptr currentThread; /* Currently executing thread (in heap). */
+    PreemptThread* preemptOnWBA;//local
+    int32_t preemptOnWBASize;//local
+    int32_t preemptOnWBAMaxSize;//local
 
-  struct GC_forwardState forwardState;
-  pointer ffiOpArgsResPtr;
-  GC_frameLayout frameLayouts; /* Array of frame layouts. */
-  uint32_t frameLayoutsLength; /* Cardinality of frameLayouts array. */
-  /* Currently only used to hold raise operands. XXX at least i think so */
-  Pointer *globalObjptrNonRoot;
-  /* Ordinary globals */
-  objptr *globals;
-  uint32_t globalsLength;
-  bool hashConsDuringGC;
-  struct GC_heap *heap;
-  struct GC_intInfInit *intInfInits;
-  uint32_t intInfInitsLength;
-  struct GC_lastMajorStatistics *lastMajorStatistics;
-  struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;
-  pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP */
-  pointer sharedLimitPlusSlop;
-  pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
-  pointer sharedStart;
-  int (*loadGlobals)(FILE *f); /* loads the globals from the file. */
-  uint32_t magic; /* The magic number for this executable. */
-  uint32_t maxFrameSize;
-  bool mutatorMarksCards;
-  bool selectiveDebug;
-  /* For PCML */
-  pthread_t pthread;
-  int32_t timeInterval; /* In milliseconds */
-  bool enableTimer;
-  /* The maximum amount of concurrency */
-  int32_t numberOfProcs;
-  /* For I/O threads */
-  int32_t numIOThreads;
-  GC_objectHashTable objectHashTable;
-  GC_objectType objectTypes; /* Array of object types. */
-  uint32_t objectTypesLength; /* Cardinality of objectTypes array. */
-  /* States for each processor */
-  GC_state procStates;
-  struct GC_profiling profiling;
-  GC_frameIndex (*returnAddressToFrameIndex) (GC_returnAddress ra);
-  uint32_t returnToC;
-  /* Roots that may be, for example, on the C call stack */
-  objptr *roots;
-  uint32_t rootsLength;
-  objptr savedThread; /* Result of GC_copyCurrentThread.
-                       * Thread interrupted by arrival of signal.
-                       */
-  objptr savedClosure; /* This is used for switching to a new thread */
-  objptr pacmlThreadId; /* ThreadId of the current pacml thread */
-  int (*saveGlobals)(FILE *f); /* saves the globals to the file. */
-  bool saveWorldStatus; /* */
-  struct GC_heap *secondaryLocalHeap; /* Used for major copying collection. */
-  struct GC_heap *sharedHeap; /* Used as a uncollected shared heap for testing lwtgc */
-  struct GC_heap *secondarySharedHeap; /* Used for major copying collection on shared heap */
-  objptr signalHandlerThread; /* Handler for signals (in heap). */
-  struct GC_signalsInfo signalsInfo;
-  struct GC_sourceMaps sourceMaps;
-  pointer stackBottom; /* Bottom of stack in current thread. */
-  uintmax_t startTime; /* The time when GC_init or GC_loadWorld was called. */
-  int32_t copiedSize;
-  int32_t syncReason;
-  struct GC_sysvals sysvals;
-  struct GC_translateState translateState;
-  struct GC_vectorInit *vectorInits;
-  uint32_t vectorInitsLength;
-  UT_array* reachable;
-  CopyObjectMap* copyObjectMap;
-  bool copyImmutable;
-  GC_weak weaks; /* Linked list of (live) weak pointers */
-  char *worldFile;
-  UT_array* directCloXferArray; /* Array to store closures directly transferred to this core */
+    objptr* danglingStackList;//local
+    int32_t danglingStackListSize;//local
+    int32_t danglingStackListMaxSize;//local
 
-  /* DEV variables
-   * ------------
-   * The following variables are only used for development purposes. The are to
-   * be removed/not used for production/benchmarking runs.
-   */
-  FILE* fp;
+    SpawnThread* spawnOnWBA;//local
+    int32_t spawnOnWBASize;//local
+    int32_t spawnOnWBAMaxSize;//local
+
+
+    bool tmpBool;//local
+    pointer tmpPointer;//local
+    int32_t tmpInt;//local
+    size_t exnStack;//local
+
+    /* Alphabetized fields follow. */
+    size_t alignment; /* *///local
+    bool amInGC; //local
+    bool amOriginal; //local
+    uint32_t procId; //local
+
+
+    uint32_t atomicState; //local
+
+    struct GC_callStackState callStackState; //local
+    bool canMinor; /* TRUE iff there is space for a minor gc. *///local
+
+    objptr currentThread; /* Currently executing thread (in heap). *///local
+
+    struct GC_forwardState forwardState; //local
+    pointer ffiOpArgsResPtr; //local
+    GC_frameLayout frameLayouts; /* Array of frame layouts. *///local?//local
+    uint32_t frameLayoutsLength; /* Cardinality of frameLayouts array. *///local
+    /* Currently only used to hold raise operands. XXX at least i think so */
+    Pointer *globalObjptrNonRoot;//local
+    /* Ordinary globals */
+    objptr *globals;//local
+    uint32_t globalsLength;//local
+    bool hashConsDuringGC;//local
+    struct GC_heap *heap;//local
+    struct GC_intInfInit *intInfInits;//local
+    uint32_t intInfInitsLength;//local
+    struct GC_lastMajorStatistics *lastMajorStatistics;//local
+    struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;//local
+    pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP *///local
+    pointer sharedLimitPlusSlop;//local
+    pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier *///local
+    pointer sharedStart;//local
+
+    bool mutatorMarksCards;//local
+
+    /* For PCML */
+    pthread_t pthread;//local
+    int32_t timeInterval; /* In milliseconds *///local
+    bool enableTimer;//local
+    /* The maximum amount of concurrency */
+    int32_t numberOfProcs;//local
+    /* For I/O threads */
+    int32_t numIOThreads;//local
+    GC_objectHashTable objectHashTable;//local
+    GC_objectType objectTypes; /* Array of object types. *///local
+    uint32_t objectTypesLength; /* Cardinality of objectTypes array. *///local
+    /* States for each processor */
+
+    struct GC_profiling profiling;//local
+    GC_frameIndex (*returnAddressToFrameIndex) (GC_returnAddress ra);//local
+    uint32_t returnToC;//local
+    /* Roots that may be, for example, on the C call stack */
+    objptr *roots;//local
+    uint32_t rootsLength;//local
+    objptr savedThread; /* Result of GC_copyCurrentThread.
+                         * Thread interrupted by arrival of signal.
+                         *///local
+    objptr savedClosure; /* This is used for switching to a new thread *///local
+    objptr pacmlThreadId; /* ThreadId of the current pacml thread *///local
+    int (*saveGlobals)(FILE *f); /* saves the globals to the file. *///local
+    bool saveWorldStatus; /* *///local
+    struct GC_heap *secondaryLocalHeap; /* Used for major copying collection. *///local
+
+    objptr signalHandlerThread; /* Handler for signals (in heap). *///local
+    struct GC_signalsInfo signalsInfo;//local
+    struct GC_sourceMaps sourceMaps;//local
+    pointer stackBottom; /* Bottom of stack in current thread. *///local
+    uintmax_t startTime; /* The time when GC_init or GC_loadWorld was called. *///local
+    int32_t copiedSize;//local
+    int32_t syncReason;//local
+    struct GC_sysvals sysvals;//local
+    struct GC_translateState translateState;//local
+    struct GC_vectorInit *vectorInits;//local
+    uint32_t vectorInitsLength;//local
+    UT_array* reachable;//local
+    CopyObjectMap* copyObjectMap;//local
+    bool copyImmutable;//local
+    GC_weak weaks; /* Linked list of (live) weak pointers *///local
+    char *worldFile;//local
+    UT_array* directCloXferArray; /* Array to store closures directly transferred to this core *///local
+
+    /* DEV variables
+     * ------------
+     * The following variables are only used for development purposes. The are to
+     * be removed/not used for production/benchmarking runs.
+     */
+    FILE* fp;//local
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */

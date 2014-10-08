@@ -7,10 +7,10 @@
  */
 
 GC_thread copyThread (GC_state s, GC_state target, GC_thread from, size_t used) {
-  s->cumulativeStatistics->numThreadsCreated++;
+  s->globalState.cumulativeStatistics->numThreadsCreated++;
   GC_thread to;
 
-  if (DEBUG_THREADS or s->controls->messages)
+  if (DEBUG_THREADS or s->globalState.controls->messages)
     fprintf (stderr, "copyThread ("FMTPTR")\n", (uintptr_t)from);
   /* newThread may do a GC, which invalidates from.
    * Hence we need to stash from someplace that the GC can find it.
@@ -38,7 +38,7 @@ void GC_copyCurrentThread (GC_state s) {
   GC_thread toThread;
   GC_stack toStack;
 
-  if (DEBUG_THREADS or s->controls->messages)
+  if (DEBUG_THREADS or s->globalState.controls->messages)
     fprintf (stderr, "GC_copyCurrentThread [%d]\n", Proc_processorNumber (s));
 
   /* Used to be an ENTER here, but we don't really need to synchronize unless

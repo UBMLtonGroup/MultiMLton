@@ -539,16 +539,16 @@ fun elaborate {input: MLBString.t}: Xml.Program.t =
              limit = get "limit_Offset",
              limitPlusSlop = get "limitPlusSlop_Offset",
              localHeapStart = get "localHeapStart_Offset",
-             maxFrameSize = get "maxFrameSize_Offset",
+             maxFrameSize = get "globalState.maxFrameSize_Offset",
              procId = get "procId_Offset",
              returnToC = get "returnToC_Offset",
-             sharedHeapStart = get "sharedHeapStart_Offset",
-             sharedHeapEnd = get "sharedHeapEnd_Offset",
+             sharedHeapStart = get "globalState.sharedHeapStart_Offset",
+             sharedHeapEnd = get "globalState.sharedHeapEnd_Offset",
              signalIsPending = get "signalsInfo.signalIsPending_Offset",
              stackBottom = get "stackBottom_Offset",
              stackLimit = get "stackLimit_Offset",
              stackTop = get "stackTop_Offset",
-             sessionStart = get "sessionStart_Offset"
+             sessionStart = get "globalState.sessionStart_Offset"
              };
             Runtime.GCField.setSizes
             {
@@ -563,16 +563,16 @@ fun elaborate {input: MLBString.t}: Xml.Program.t =
              limit = get "limit_Size",
              limitPlusSlop = get "limitPlusSlop_Size",
              localHeapStart = get "localHeapStart_Size",
-             maxFrameSize = get "maxFrameSize_Size",
+             maxFrameSize = get "globalState.maxFrameSize_Size",
              procId = get "procId_Size",
              returnToC = get "returnToC_Size",
-             sharedHeapStart = get "sharedHeapStart_Size",
-             sharedHeapEnd = get "sharedHeapEnd_Size",
+             sharedHeapStart = get "globalState.sharedHeapStart_Size",
+             sharedHeapEnd = get "globalState.sharedHeapEnd_Size",
              signalIsPending = get "signalsInfo.signalIsPending_Size",
              stackBottom = get "stackBottom_Size",
              stackLimit = get "stackLimit_Size",
              stackTop = get "stackTop_Size",
-             sessionStart = get "sessionStart_Size"
+             sessionStart = get "globalState.sessionStart_Size"
              }
          end
       (* Setup endianness *)

@@ -118,7 +118,7 @@ void runAlrmHandler (void *arg) {                                       \
             sigwait (&set, &signum);                                    \
             /* set up switches if GC_state is registered for an alrm */ \
             for (int proc = 0; proc < s->numberOfProcs; proc++) {       \
-                GC_state gcState = &s->procStates[proc];                \
+                GC_state gcState = &s->globalState.procStates[proc];                \
                 if (DEBUG_ALRM)                                         \
                 {                                                       \
                     fprintf(stderr,"Got an ALRM\n");                    \
@@ -162,8 +162,8 @@ void run (void *arg) {                                                  \
             exit (1);                                                   \
         }                                                               \
         uint32_t num = Proc_processorNumber (s)                         \
-                * s->controls->affinityStride                           \
-                + s->controls->affinityBase;                            \
+                * s->globalState.controls->affinityStride                           \
+                + s->globalState.controls->affinityBase;                            \
          set_cpu_affinity(num);                                         \
                                                                         \
         /* Save our state locally */                                    \

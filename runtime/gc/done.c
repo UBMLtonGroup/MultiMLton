@@ -82,7 +82,7 @@ static void summaryWrite (GC_state s,
      &cumul->ru_gcMinor,
      cumul->numMinorGCs,
      cumul->bytesCopiedMinor);
-  totalTime = getCurrentTime () - s->procStates[0].startTime;
+  totalTime = getCurrentTime () - s->globalState.procStates[0].startTime;
 
   char str[20];
   sprintf (str, " ");
@@ -350,20 +350,20 @@ void GC_summaryWrite (void) {
   out = stderr;
   char fname[40];
   struct GC_cumulativeStatistics cumul;
-  if (s->controls->summary) {
+  if (s->globalState.controls->summary) {
     initStat (&cumul);
-    if (s->controls->summary == SUMMARY_INDIVIDUAL) {
+    if (s->globalState.controls->summary == SUMMARY_INDIVIDUAL) {
       for (int proc=0; proc < s->numberOfProcs; proc++) {
         sprintf (fname, "gc-summary.%d.out", proc);
         out = fopen_safe (fname, "wb");
-        summaryWrite (s, s->procStates[proc].cumulativeStatistics, out, FALSE);
+        summaryWrite (s, s->globalState.procStates[proc].globalState.cumulativeStatistics, out, FALSE);
         fclose_safe (out);
       }
     }
 
     for (int proc=0; proc < s->numberOfProcs; proc++) {
       struct GC_cumulativeStatistics* d =
-        s->procStates[proc].cumulativeStatistics;
+        s->globalState.procStates[proc].globalState.cumulativeStatistics;
       cumul.numForceStackGrowth += d->numForceStackGrowth;
       cumul.bytesAllocated += d->bytesAllocated;
       cumul.bytesFilled += d->bytesFilled;

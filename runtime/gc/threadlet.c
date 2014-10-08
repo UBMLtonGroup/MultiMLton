@@ -59,7 +59,7 @@ GC_thread GC_copyParasite (int startOffset) {
     /* TODO : Avoid this computation and subtract fixed offset
      * from stackTop to get end pointer */
     GC_state s = pthread_getspecific (gcstate_key);
-    s->cumulativeStatistics->numParasitesReified++;
+    s->globalState.cumulativeStatistics->numParasitesReified++;
 
     assert (startOffset >=0);
 
@@ -91,7 +91,7 @@ GC_thread GC_copyParasite (int startOffset) {
     assert (start < end);
 
     long int numBytes = end-start;
-    s->cumulativeStatistics->bytesParasiteStack += numBytes;
+    s->globalState.cumulativeStatistics->bytesParasiteStack += numBytes;
 
     s->copiedSize = numBytes;
     if (DEBUG_SPLICE) {
@@ -108,7 +108,7 @@ GC_thread GC_copyParasite (int startOffset) {
     s->amInGC = FALSE;
 
     if (MEASURE_PARASITE_CLOSURE) {
-      s->cumulativeStatistics->bytesParasiteClosure +=
+      s->globalState.cumulativeStatistics->bytesParasiteClosure +=
         GC_sizeInLocalHeap (s, (pointer)th);
     }
 
@@ -229,7 +229,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
     int i=0;
     while (s->stackLimit < s->stackTop + stk->used) {
-        s->cumulativeStatistics->numForceStackGrowth++;
+        s->globalState.cumulativeStatistics->numForceStackGrowth++;
         if (DEBUG_SPLICE) {
             fprintf (stderr, "\tGrowingStack\n");
             fprintf (stderr, "\t\tstackTop = "FMTPTR"\n", (uintptr_t)s->stackTop);
@@ -255,7 +255,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
             const size_t RESERVED_MAX = (SIZE_MAX >> 2);
             double reservedD = (double)reservedNew;
             double reservedGrowD =
-                (double)s->controls->ratios.stackCurrentGrow * reservedD;
+                (double)s->globalState.controls->ratios.stackCurrentGrow * reservedD;
             size_t reservedGrow =
                 reservedGrowD > (double)RESERVED_MAX ?
                 RESERVED_MAX : (size_t)reservedGrowD;
@@ -309,5 +309,5 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
 void GC_parasiteCreatedEvent (void) {
   GC_state s = pthread_getspecific (gcstate_key);
-  s->cumulativeStatistics->numParasitesCreated++;
+  s->globalState.cumulativeStatistics->numParasitesCreated++;
 }

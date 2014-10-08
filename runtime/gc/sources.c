@@ -90,7 +90,7 @@ void showSources (GC_state s) {
   uint32_t i;
   uint32_t j;
 
-  fprintf (stdout, "0x%08"PRIx32"\n", s->magic);
+  fprintf (stdout, "0x%08"PRIx32"\n", s->globalState.magic);
   fprintf (stdout, "%"PRIu32"\n", s->sourceMaps.sourceNamesLength);
   for (i = 0; i < s->sourceMaps.sourceNamesLength; i++)
     fprintf (stdout, "%s\n", s->sourceMaps.sourceNames[i]);

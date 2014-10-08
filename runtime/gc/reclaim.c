@@ -55,7 +55,7 @@ void reclaimObjects (GC_state s) {
         break;
 
       numReclaimed++;
-      objptr op = pointerToObjptr (p, s->sharedHeap->start);
+      objptr op = pointerToObjptr (p, s->globalState.sharedHeap->start);
       GC_header* hp = getHeaderp (p);
       GC_header h = getHeader (p);
       *hp = h & ~(LIFT_MASK);
@@ -93,7 +93,7 @@ void reclaimObjects (GC_state s) {
 bool addToReachableArray (GC_state s, pointer p, __attribute__((unused)) pointer prev) {
   bool toPush = TRUE;
   assert (s->reachable);
-  if (isPointerInHeap (s, s->sharedHeap, p)) {
+  if (isPointerInHeap (s, s->globalState.sharedHeap, p)) {
     if (DEBUG_RECLAIM)
       fprintf (stderr, "addToReachableArray "FMTPTR"\n", (uintptr_t)p);
 
@@ -152,7 +152,7 @@ void computeExclusivityInformation (GC_state s) {
 
   if (Proc_processorNumber (s) == 0) {
     for (int proc=0; proc < s->numberOfProcs; proc++) {
-      GC_state r = &s->procStates[proc];
+      GC_state r = &s->globalState.procStates[proc];
       r->reachable = NULL;
     }
 
@@ -166,7 +166,7 @@ void computeExclusivityInformation (GC_state s) {
     for (unsigned int i = 0; i < s->globalsLength; ++i)
       dfsMarkReachable (s, &s->globals[i]);
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      GC_state r = &s->procStates[proc];
+      GC_state r = &s->globalState.procStates[proc];
       if (DEBUG_RECLAIM)
         fprintf (stderr, "reclaim: MARK foreachObjptrInWBAs [%d]\n", r->procId);
       foreachObjptrInExportableWBAs (s, r, dfsMarkReachable);
@@ -180,7 +180,7 @@ void computeExclusivityInformation (GC_state s) {
     for (unsigned int i = 0; i < s->globalsLength; ++i)
       dfsUnmarkReachable (s, &s->globals[i]);
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      GC_state r = &s->procStates[proc];
+      GC_state r = &s->globalState.procStates[proc];
       if (DEBUG_RECLAIM)
         fprintf (stderr, "reclaim: UNMARK foreachObjptrInWBAs [%d]\n", r->procId);
       foreachObjptrInExportableWBAs (s, r, dfsUnmarkReachable);
@@ -192,7 +192,7 @@ void computeExclusivityInformation (GC_state s) {
 
     //For local heaps
     for (int proc=0; proc < s->numberOfProcs; proc++) {
-      GC_state r = &s->procStates[proc];
+      GC_state r = &s->globalState.procStates[proc];
       r->reachable = NULL;
       utarray_new (r->reachable, &icd);
       r->syncReason = SYNC_MISC;
@@ -217,7 +217,7 @@ void computeExclusivityInformation (GC_state s) {
 
     //For local heaps
     for (int proc=0; proc < s->numberOfProcs; proc++) {
-      GC_state r = &s->procStates[proc];
+      GC_state r = &s->globalState.procStates[proc];
       if (DEBUG_RECLAIM)
         fprintf (stderr, "Processing array of size %d [%d]\n", utarray_len (r->reachable), r->procId);
       while (utarray_len (r->reachable) != 0) {
@@ -245,7 +245,7 @@ void computeExclusivityInformation (GC_state s) {
       GC_objectSharingInfo e, tmp;
       HASH_ITER (hh, globalMap, e, tmp) {
         if (e->coreId != -1) {
-          GC_state r = &s->procStates[e->coreId];
+          GC_state r = &s->globalState.procStates[e->coreId];
           if (!(r->reachable))
             utarray_new (r->reachable, &icd);
           pointer p = (pointer)e->objectLocation;

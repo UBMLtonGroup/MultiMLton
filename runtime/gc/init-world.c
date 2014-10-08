@@ -53,7 +53,7 @@ void initIntInfs (GC_state s) {
   __mpz_struct resmpz;
   int ans;
 
-  assert (isFrontierAligned (s, s->sharedFrontier));
+  assert (isFrontierAligned (s, s->globalState.sharedFrontier));
   for (i = 0; i < s->intInfInitsLength; i++) {
     inits = &(s->intInfInits[i]);
     assert (inits->globalIndex < s->globalsLength);
@@ -72,7 +72,7 @@ void initIntInfs (GC_state s) {
     assert (0);
     exit (1);
   }
-  assert (isFrontierAligned (s, s->sharedFrontier));
+  assert (isFrontierAligned (s, s->globalState.sharedFrontier));
 }
 
 void initVectors (GC_state s) {
@@ -82,7 +82,7 @@ void initVectors (GC_state s) {
 
   assert (isFrontierAligned (s, s->frontier));
   inits = s->vectorInits;
-  frontier = s->sharedFrontier;
+  frontier = s->globalState.sharedFrontier;
   for (i = 0; i < s->vectorInitsLength; i++) {
     size_t bytesPerElement;
     size_t dataBytes;
@@ -96,7 +96,7 @@ void initVectors (GC_state s) {
                            ? OBJPTR_SIZE
                            : dataBytes),
                         s->alignment);
-    assert (objectSize <= (size_t)(s->sharedHeap->start + s->sharedHeap->size - frontier));
+    assert (objectSize <= (size_t)(s->globalState.sharedHeap->start + s->globalState.sharedHeap->size - frontier));
     *((GC_arrayCounter*)(frontier)) = 0;
     frontier = frontier + GC_ARRAY_COUNTER_SIZE;
     *((GC_arrayLength*)(frontier)) = inits[i].numElements;
@@ -120,7 +120,7 @@ void initVectors (GC_state s) {
     }
     *((GC_header*)(frontier)) = (buildHeaderFromTypeIndex (typeIndex) | LIFT_MASK);
     frontier = frontier + GC_HEADER_SIZE;
-    s->globals[inits[i].globalIndex] = pointerToObjptr(frontier, s->sharedHeap->start);
+    s->globals[inits[i].globalIndex] = pointerToObjptr(frontier, s->globalState.sharedHeap->start);
     if (DEBUG_DETAILED)
       fprintf (stderr, "allocated vector at "FMTPTR"\n",
                (uintptr_t)(s->globals[inits[i].globalIndex]));
@@ -131,9 +131,9 @@ void initVectors (GC_state s) {
     fprintf (stderr, "frontier after string allocation is "FMTPTR"\n",
              (uintptr_t)frontier);
   //GC_profileAllocInc (s, (size_t)(frontier - s->frontier));
-  s->cumulativeStatistics->bytesLifted += (size_t)(frontier - s->sharedFrontier);
+  s->globalState.cumulativeStatistics->bytesLifted += (size_t)(frontier - s->globalState.sharedFrontier);
   assert (isFrontierAligned (s, frontier));
-  s->sharedFrontier = frontier;
+  s->globalState.sharedFrontier = frontier;
 }
 
 void initWorld (GC_state s) {
@@ -146,31 +146,31 @@ void initWorld (GC_state s) {
     s->globals[i] = BOGUS_OBJPTR;
   s->lastSharedMajorStatistics->bytesLive = sizeofInitialBytesLive (s);
   minSize = s->lastSharedMajorStatistics->bytesLive;
-  if (s->controls->maxHeapShared != 0 && s->controls->maxHeapShared < minSize) {
+  if (s->globalState.controls->maxHeapShared != 0 && s->globalState.controls->maxHeapShared < minSize) {
     fprintf (stderr, "Unable to create shared heap with maxHeapShared %zu\n", minSize);
     exit (1);
   }
-  size_t initSize = (s->controls->maxHeapShared != 0 && (s->controls->maxHeapShared < 131072))?
-                     s->controls->maxHeapShared : 131072;
-  createHeap (s, s->sharedHeap, sizeofHeapDesired (s, max(minSize,initSize), 0, SHARED_HEAP), minSize);
+  size_t initSize = (s->globalState.controls->maxHeapShared != 0 && (s->globalState.controls->maxHeapShared < 131072))?
+                     s->globalState.controls->maxHeapShared : 131072;
+  createHeap (s, s->globalState.sharedHeap, sizeofHeapDesired (s, max(minSize,initSize), 0, SHARED_HEAP), minSize);
 
   //set up shared heap
-  start = alignFrontier (s, s->sharedHeap->start);
-  s->sharedStart = s->sharedFrontier = start;
-  s->sharedLimitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;
-  s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+  start = alignFrontier (s, s->globalState.sharedHeap->start);
+  s->sharedStart = s->globalState.sharedFrontier = start;
+  s->sharedLimitPlusSlop = s->globalState.sharedHeap->start + s->globalState.sharedHeap->size - GC_BONUS_SLOP;
+  s->globalState.sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
   initIntInfs (s);
   initVectors (s);
-  s->sharedHeap->oldGenSize = s->sharedFrontier - s->sharedHeap->start;
+  s->globalState.sharedHeap->oldGenSize = s->globalState.sharedFrontier - s->globalState.sharedHeap->start;
   setGCStateCurrentSharedHeap (s, 0, 0, true);
 
   //set up local heap
-  initSize = (s->controls->maxHeapLocal != 0 && (s->controls->maxHeapLocal < 65536))?
-                    s->controls->maxHeapLocal:65536;
+  initSize = (s->globalState.controls->maxHeapLocal != 0 && (s->globalState.controls->maxHeapLocal < 65536))?
+                    s->globalState.controls->maxHeapLocal:65536;
   createHeap (s, s->heap, sizeofHeapDesired (s, initSize, 0, LOCAL_HEAP), 0);
   setCardMapAndCrossMap (s);
   start = alignFrontier (s, s->heap->start);
-  s->start = s->frontier = s->sessionStart = start;
+  s->start = s->frontier = s->globalState.sessionStart = start;
   s->limitPlusSlop = s->heap->start + s->heap->size - GC_BONUS_SLOP;
   s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
   assert ((size_t)(s->frontier - start) <= s->lastMajorStatistics->bytesLive);
@@ -190,11 +190,11 @@ void duplicateWorld (GC_state d, GC_state s) {
   //set up local heap
   d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->heap, LOCAL_HEAP);
-  size_t initSize = (s->controls->maxHeapLocal != 0 && (s->controls->maxHeapLocal < 65536))?
-                    s->controls->maxHeapLocal:65536;
+  size_t initSize = (s->globalState.controls->maxHeapLocal != 0 && (s->globalState.controls->maxHeapLocal < 65536))?
+                    s->globalState.controls->maxHeapLocal:65536;
   createHeap (d, d->heap, sizeofHeapDesired (s, initSize, 0, LOCAL_HEAP), 0);
   start = alignFrontier (d, d->heap->start);
-  d->start = d->frontier = d->sessionStart = start;
+  d->start = d->frontier = d->globalState.sessionStart = start;
   d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;
   d->limit = d->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
   d->heap->oldGenSize = d->frontier - d->heap->start;
@@ -208,11 +208,11 @@ void duplicateWorld (GC_state d, GC_state s) {
   /* Use the original to allocate */
   thread = newThread (d, sizeofStackInitialReserved (d));
 
-  d->cumulativeStatistics->maxHeapSize = d->heap->size;
-  d->cumulativeStatistics->maxSharedHeapSize =
-    s->cumulativeStatistics->maxSharedHeapSize;
-  d->sharedHeap = s->sharedHeap;
-  d->secondarySharedHeap = s->secondarySharedHeap;
+  d->globalState.cumulativeStatistics->maxHeapSize = d->heap->size;
+  d->globalState.cumulativeStatistics->maxSharedHeapSize =
+    s->globalState.cumulativeStatistics->maxSharedHeapSize;
+  d->globalState.sharedHeap = s->globalState.sharedHeap;
+  d->globalState.secondarySharedHeap = s->globalState.secondarySharedHeap;
 
   /* Allocation handled in setGCStateCurrentSharedHeap when called from initWorld */
 

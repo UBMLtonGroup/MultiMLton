@@ -50,34 +50,34 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize, GC_he
   uintmax_t maxHeap;
 
   if (kind == LOCAL_HEAP)
-    maxHeap = s->controls->maxHeapLocal;
+    maxHeap = s->globalState.controls->maxHeapLocal;
   else
-    maxHeap = s->controls->maxHeapShared;
+    maxHeap = s->globalState.controls->maxHeapShared;
 
   liveSize = align (liveSize, s->sysvals.pageSize);
   liveWithMapsSize = liveSize + sizeofCardMapAndCrossMap (s, liveSize);
 
   withMapsRatio = (float)s->sysvals.ram / (float)liveWithMapsSize;
-  if (withMapsRatio >= s->controls->ratios.live + s->controls->ratios.grow) {
+  if (withMapsRatio >= s->globalState.controls->ratios.live + s->globalState.controls->ratios.grow) {
     /* Cheney copying fits in RAM with desired ratios.live. */
-    res = liveSize * s->controls->ratios.live;
+    res = liveSize * s->globalState.controls->ratios.live;
     /* If the heap is currently close in size to what we want, leave
      * it alone.  Favor growing over shrinking.
      */
     unless (1.1 * currentSize <= res
             or res <= .5 * currentSize)
       res = currentSize;
-  } else if (s->controls->ratios.grow >= s->controls->ratios.copy
-             and withMapsRatio >= 2 * s->controls->ratios.copy) {
+  } else if (s->globalState.controls->ratios.grow >= s->globalState.controls->ratios.copy
+             and withMapsRatio >= 2 * s->globalState.controls->ratios.copy) {
     /* Split RAM in half.  Round down by pageSize so that the total
      * amount of space taken isn't greater than RAM once rounding
      * happens.  This is so resizeLocalHeapSecondary doesn't get confused
      * and free a semispace in a misguided attempt to avoid paging.
      */
     res = alignDown (s->sysvals.ram / 2, s->sysvals.pageSize);
-  } else if (withMapsRatio >= s->controls->ratios.copy + s->controls->ratios.grow) {
+  } else if (withMapsRatio >= s->globalState.controls->ratios.copy + s->globalState.controls->ratios.grow) {
     /* Cheney copying fits in RAM. */
-    res = s->sysvals.ram - s->controls->ratios.grow * liveSize;
+    res = s->sysvals.ram - s->globalState.controls->ratios.grow * liveSize;
     /* If the heap isn't too much smaller than what we want, leave it
      * alone.  On the other hand, if it is bigger we want to leave res
      * as is so that the heap is shrunk, to try to avoid paging.
@@ -85,7 +85,7 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize, GC_he
     if (currentSize <= res
         and res <= 1.1 * currentSize)
       res = currentSize;
-  } else if (withMapsRatio >= s->controls->ratios.markCompact) {
+  } else if (withMapsRatio >= s->globalState.controls->ratios.markCompact) {
     /* Mark compact fits in RAM.  It doesn't matter what the current
      * size is.  If the heap is currently smaller, we are using
      * copying and should switch to mark-compact.  If the heap is
@@ -94,7 +94,7 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize, GC_he
      */
     res = s->sysvals.ram;
   } else { /* Required live ratio. */
-    res = liveSize * s->controls->ratios.markCompact;
+    res = liveSize * s->globalState.controls->ratios.markCompact;
     /* If the current heap is bigger than res, then shrinking always
      * sounds like a good idea.  However, depending on what pages the
      * VM keeps around, growing could be very expensive, if it
@@ -102,15 +102,15 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize, GC_he
      * growHeap will make the right thing happen.
      */
   }
-  if (s->controls->fixedHeap > 0) {
-    if (res > s->controls->fixedHeap / 2)
-      res = s->controls->fixedHeap;
+  if (s->globalState.controls->fixedHeap > 0) {
+    if (res > s->globalState.controls->fixedHeap / 2)
+      res = s->globalState.controls->fixedHeap;
     else
-      res = s->controls->fixedHeap / 2;
+      res = s->globalState.controls->fixedHeap / 2;
     if (res < liveSize) {
       assert (0 and "Out of memory with fixed heap.");
       die ("Out of memory with fixed heap size %s.",
-           uintmaxToCommaString(s->controls->fixedHeap));
+           uintmaxToCommaString(s->globalState.controls->fixedHeap));
     }
   } else if (maxHeap > 0) {
     if (res > maxHeap)
@@ -138,7 +138,7 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize, GC_he
 void releaseHeap (GC_state s, GC_heap h) {
   if (NULL == h->start)
     return;
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Releasing heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map).]\n",
              (uintptr_t)(h->start),
@@ -160,7 +160,7 @@ void shrinkHeap (GC_state s, GC_heap h, size_t keepSize) {
   if (keepSize < h->size) {
     size_t keepWithMapsSize;
     keepWithMapsSize = keepSize + sizeofCardMapAndCrossMap (s, keepSize);
-    if (DEBUG or s->controls->messages) {
+    if (DEBUG or s->globalState.controls->messages) {
       fprintf (stderr,
                "[GC: Shrinking heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map),]\n",
                (uintptr_t)(h->start),
@@ -193,7 +193,7 @@ bool createHeap (GC_state s, GC_heap h,
   size_t newWithMapsSize;
   bool isShared = FALSE;
 
-  if (h == s->sharedHeap || h == s->secondarySharedHeap)
+  if (h == s->globalState.sharedHeap || h == s->globalState.secondarySharedHeap)
     isShared = TRUE;
   else
     isShared = FALSE;
@@ -252,12 +252,12 @@ bool createHeap (GC_state s, GC_heap h,
         h->start = newStart;
         h->size = newSize;
         h->withMapsSize = newWithMapsSize;
-        if (!isShared && h->size > s->cumulativeStatistics->maxHeapSize)
-          s->cumulativeStatistics->maxHeapSize = h->size;
-        if (isShared && h->size > s->cumulativeStatistics->maxSharedHeapSize)
-          s->cumulativeStatistics->maxSharedHeapSize = h->size;
+        if (!isShared && h->size > s->globalState.cumulativeStatistics->maxHeapSize)
+          s->globalState.cumulativeStatistics->maxHeapSize = h->size;
+        if (isShared && h->size > s->globalState.cumulativeStatistics->maxSharedHeapSize)
+          s->globalState.cumulativeStatistics->maxSharedHeapSize = h->size;
         assert (minSize <= h->size and h->size <= desiredSize);
-        if (DEBUG or s->controls->messages)
+        if (DEBUG or s->globalState.controls->messages)
           fprintf (stderr,
                    "[GC: Created heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map).]\n",
                    (uintptr_t)(h->start),
@@ -266,7 +266,7 @@ bool createHeap (GC_state s, GC_heap h,
         return TRUE;
       }
     }
-    if (s->controls->messages) {
+    if (s->globalState.controls->messages) {
       fprintf (stderr,
                "[GC: Creating heap of size %s bytes (+ %s bytes card/cross map) cannot be satisfied,]\n",
                uintmaxToCommaString (newSize),
@@ -289,22 +289,22 @@ bool createHeap (GC_state s, GC_heap h,
 /* createHeapSecondary (s, desiredSize)
  */
 bool createHeapSecondary (GC_state s, size_t desiredSize) {
-  if ((s->controls->fixedHeap > 0
-       and s->heap->size + desiredSize > s->controls->fixedHeap)
-      or (s->controls->maxHeapLocal > 0
-          and s->heap->size + desiredSize > s->controls->maxHeapLocal))
+  if ((s->globalState.controls->fixedHeap > 0
+       and s->heap->size + desiredSize > s->globalState.controls->fixedHeap)
+      or (s->globalState.controls->maxHeapLocal > 0
+          and s->heap->size + desiredSize > s->globalState.controls->maxHeapLocal))
     return FALSE;
   return createHeap (s, s->secondaryLocalHeap, desiredSize, s->heap->oldGenSize);
 }
 
 bool createSharedHeapSecondary (GC_state s, size_t desiredSize) {
-  if ((s->controls->fixedHeap > 0
-       and s->sharedHeap->size + desiredSize > s->controls->fixedHeap)
-      or (s->controls->maxHeapShared > 0
-          and s->sharedHeap->size + desiredSize > s->controls->maxHeapShared))
+  if ((s->globalState.controls->fixedHeap > 0
+       and s->globalState.sharedHeap->size + desiredSize > s->globalState.controls->fixedHeap)
+      or (s->globalState.controls->maxHeapShared > 0
+          and s->globalState.sharedHeap->size + desiredSize > s->globalState.controls->maxHeapShared))
     return FALSE;
-  return createHeap (s, s->secondarySharedHeap,
-                     desiredSize, s->sharedHeap->oldGenSize);
+  return createHeap (s, s->globalState.secondarySharedHeap,
+                     desiredSize, s->globalState.sharedHeap->oldGenSize);
 }
 
 /* remapHeap (s, h, desiredSize, minSize)
@@ -319,7 +319,7 @@ bool remapHeap (GC_state s, GC_heap h,
   size_t origWithMapsSize;
   bool isShared = FALSE;
 
-  if (h == s->sharedHeap || h == s->secondarySharedHeap)
+  if (h == s->globalState.sharedHeap || h == s->globalState.secondarySharedHeap)
     isShared = TRUE;
 
 #if not HAS_REMAP
@@ -352,12 +352,12 @@ bool remapHeap (GC_state s, GC_heap h,
       h->start = newStart;
       h->size = newSize;
       h->withMapsSize = newWithMapsSize;
-      if (!isShared && h->size > s->cumulativeStatistics->maxHeapSize)
-        s->cumulativeStatistics->maxHeapSize = h->size;
-      if (isShared && h->size > s->cumulativeStatistics->maxSharedHeapSize)
-        s->cumulativeStatistics->maxSharedHeapSize = h->size;
+      if (!isShared && h->size > s->globalState.cumulativeStatistics->maxHeapSize)
+        s->globalState.cumulativeStatistics->maxHeapSize = h->size;
+      if (isShared && h->size > s->globalState.cumulativeStatistics->maxSharedHeapSize)
+        s->globalState.cumulativeStatistics->maxSharedHeapSize = h->size;
       assert (minSize <= h->size and h->size <= desiredSize);
-      if (DEBUG or s->controls->messages)
+      if (DEBUG or s->globalState.controls->messages)
         fprintf (stderr,
                  "[GC: Remapped heap at "FMTPTR" to size %s bytes (+ %s bytes card/cross map).]\n",
                  (uintptr_t)(h->start),
@@ -365,7 +365,7 @@ bool remapHeap (GC_state s, GC_heap h,
                  uintmaxToCommaString(h->withMapsSize - h->size));
       return TRUE;
     }
-    if (s->controls->messages) {
+    if (s->globalState.controls->messages) {
       fprintf (stderr,
                "[GC: Remapping heap to size %s bytes (+ %s bytes card/cross map) cannot be satisfied,]\n",
                uintmaxToCommaString (newSize),
@@ -404,13 +404,13 @@ void growHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize) {
 
   char str[20];
   sprintf (str, "local");
-  if (h == s->sharedHeap) {
+  if (h == s->globalState.sharedHeap) {
     isShared = TRUE;
     sprintf (str, "shared");
   }
 
   assert (desiredSize >= h->size);
-  if (DEBUG_RESIZING or s->controls->messages) {
+  if (DEBUG_RESIZING or s->globalState.controls->messages) {
     fprintf (stderr,
              "[GC: Growing %s heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map),]\n",
              str,
@@ -468,18 +468,18 @@ copy:
     newHeapp->oldGenSize = liveSize;
     *curHeapp = *newHeapp;
   } else if (useCurrent) {
-    if (DEBUG_RESIZING or s->controls->messages) {
+    if (DEBUG_RESIZING or s->globalState.controls->messages) {
       fprintf (stderr,
                "[GC: Using heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map).]\n",
                (uintptr_t)h->start,
                uintmaxToCommaString(h->size),
                uintmaxToCommaString(h->withMapsSize - h->size));
     }
-  } else if (s->controls->mayPageHeap) {
+  } else if (s->globalState.controls->mayPageHeap) {
     /* Page the heap to disk and try again. */
     void *data;
 
-    if (DEBUG or s->controls->messages) {
+    if (DEBUG or s->globalState.controls->messages) {
       fprintf (stderr,
                "[GC: Writing %s bytes of heap at "FMTPTR" to disk.]\n",
                uintmaxToCommaString(liveSize),
@@ -488,7 +488,7 @@ copy:
     data = GC_diskBack_write (curHeapp->start, liveSize);
     releaseHeap (s, curHeapp);
     if (createHeap (s, curHeapp, desiredSize, minSize)) {
-      if (DEBUG or s->controls->messages) {
+      if (DEBUG or s->globalState.controls->messages) {
         fprintf (stderr,
                  "[GC: Reading %s bytes of heap to "FMTPTR" from disk.]\n",
                  uintmaxToCommaString(liveSize),
@@ -499,13 +499,13 @@ copy:
       curHeapp->oldGenSize = liveSize;
     } else {
       GC_diskBack_close (data);
-      if (s->controls->messages)
+      if (s->globalState.controls->messages)
         GC_displayMem ();
       die ("Out of memory.  Unable to allocate heap with %s bytes.\n",
            uintmaxToCommaString(minSize));
     }
   } else {
-    if (s->controls->messages)
+    if (s->globalState.controls->messages)
       GC_displayMem ();
     die ("Out of memory.  Unable to allocate heap with %s bytes.\n",
          uintmaxToCommaString(minSize));
@@ -525,7 +525,7 @@ void resizeHeap (GC_state s, GC_heap h, size_t minSize) {
   size_t desiredSize;
   bool isShared = FALSE;
 
-  if (h == s->sharedHeap)
+  if (h == s->globalState.sharedHeap)
     isShared = TRUE;
 
   if (DEBUG_RESIZING)
@@ -543,7 +543,7 @@ void resizeHeap (GC_state s, GC_heap h, size_t minSize) {
     shrinkHeap (s, h, desiredSize);
   } else {
     if (isShared)
-      releaseHeap (s, s->secondarySharedHeap);
+      releaseHeap (s, s->globalState.secondarySharedHeap);
     else
       releaseHeap (s, s->secondaryLocalHeap);
     growHeap (s, h, desiredSize, minSize);
@@ -580,19 +580,19 @@ void resizeLocalHeapSecondary (GC_state s) {
 void resizeSharedHeapSecondary (GC_state s, size_t primarySize) {
   size_t secondarySize;
 
-  secondarySize = s->secondarySharedHeap->size;
+  secondarySize = s->globalState.secondarySharedHeap->size;
   if (DEBUG_RESIZING)
     fprintf (stderr, "secondarySharedHeapResize\n");
   if (0 == secondarySize)
     return;
   if (2 * primarySize > s->sysvals.ram)
     /* Holding on to secondarySharedHeap might cause paging.  So don't. */
-    releaseHeap (s, s->secondarySharedHeap);
+    releaseHeap (s, s->globalState.secondarySharedHeap);
   else if (secondarySize < primarySize) {
-    unless (remapHeap (s, s->secondarySharedHeap, primarySize, primarySize))
-      releaseHeap (s, s->secondarySharedHeap);
+    unless (remapHeap (s, s->globalState.secondarySharedHeap, primarySize, primarySize))
+      releaseHeap (s, s->globalState.secondarySharedHeap);
   } else if (secondarySize > primarySize)
-    shrinkHeap (s, s->secondarySharedHeap, primarySize);
-  assert (0 == s->secondarySharedHeap->size
-          or primarySize == s->secondarySharedHeap->size);
+    shrinkHeap (s, s->globalState.secondarySharedHeap, primarySize);
+  assert (0 == s->globalState.secondarySharedHeap->size
+          or primarySize == s->globalState.secondarySharedHeap->size);
 }

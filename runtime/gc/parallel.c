@@ -31,7 +31,7 @@ void Parallel_init (void) {
     /* Move the object pointers in call-from-c-handler stack to the shared heap in
      * preparation for copying this stack to each processor */
     {
-      GC_thread thrd = (GC_thread) objptrToPointer (s->callFromCHandlerThread, s->heap->start);
+      GC_thread thrd = (GC_thread) objptrToPointer (s->globalState.callFromCHandlerThread, s->heap->start);
       pointer stk = objptrToPointer (thrd->stack, s->heap->start);
       moveEachObjptrInObject (s, stk);
     }
@@ -40,9 +40,9 @@ void Parallel_init (void) {
     /* XXX hack copy the call-from-c-handler into the worker threads
        assumes this is called by the primary thread */
     for (int proc = 0; proc < s->numberOfProcs; proc++)
-      s->procStates[proc].callFromCHandlerThread =
-        pointerToObjptr (copyThreadTo (s, &s->procStates[proc],
-                                       objptrToPointer(s->callFromCHandlerThread, s->heap->start)), s->heap->start);
+      s->globalState.procStates[proc].globalState.callFromCHandlerThread =
+        pointerToObjptr (copyThreadTo (s, &s->globalState.procStates[proc],
+                                       objptrToPointer(s->globalState.callFromCHandlerThread, s->heap->start)), s->heap->start);
 
     /* Lift all objects from local heap of processor 0 to the shared heap. This
      * must come before waking up the processors */
@@ -71,12 +71,12 @@ Int32 Parallel_numIOThreads (void) {
 
 Word64 Parallel_maxBytesLive (void) {
   GC_state s = pthread_getspecific (gcstate_key);
-  return (uint64_t)s->cumulativeStatistics->maxBytesLiveSinceReset;
+  return (uint64_t)s->globalState.cumulativeStatistics->maxBytesLiveSinceReset;
 }
 
 void Parallel_resetBytesLive (void) {
   GC_state s = pthread_getspecific (gcstate_key);
-  s->cumulativeStatistics->maxBytesLiveSinceReset = 0;
+  s->globalState.cumulativeStatistics->maxBytesLiveSinceReset = 0;
 }
 
 void maybeWaitForGC (GC_state s) {
@@ -116,7 +116,7 @@ void Parallel_lock (Int32 p) {
                                              myNumber));
   /*
   if (needGCTime (s))
-    stopTiming (&ru_lock, &s->cumulativeStatistics->ru_lock);
+    stopTiming (&ru_lock, &s->globalState.cumulativeStatistics->ru_lock);
   */
 }
 

@@ -20,7 +20,7 @@ void translateObjptrLocal (GC_state s, objptr *opp) {
   p = objptrToPointer (*opp, s->translateState.from);
 
   /* Do not translate pointers that does not belong to your heap */
-  if (isPointerInHeap (s, s->sharedHeap, p)) {
+  if (isPointerInHeap (s, s->globalState.sharedHeap, p)) {
       if (DEBUG_DETAILED)
           fprintf (stderr, "translateObjptrLocal: shared heap pointer "FMTPTR" translation skipped.\n",
                    (uintptr_t)p);
@@ -58,7 +58,7 @@ void translateHeap (GC_state s, pointer from, pointer to, size_t size) {
   if (from == to)
     return;
 
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Translating heap at "FMTPTR" of size %s bytes from "FMTPTR".] [%d]\n",
              (uintptr_t)to,
@@ -84,7 +84,7 @@ void translateObjptrShared (GC_state s, objptr* opp) {
   bool done;
   do {
     done = TRUE;
-    p = objptrToPointer (*opp, s->sharedHeap->start);
+    p = objptrToPointer (*opp, s->globalState.sharedHeap->start);
     pointer oldP = p;
 
     if (DEBUG_DETAILED || DEBUG_TRANSLATE)
@@ -139,7 +139,7 @@ void translateRange (GC_state s, pointer from, pointer to, size_t size) {
   if (from == to)
     return;
 
-  if (DEBUG or s->controls->messages)
+  if (DEBUG or s->globalState.controls->messages)
     fprintf (stderr,
              "[GC: Translating range at "FMTPTR" of size %s bytes from "FMTPTR".] [%d]\n",
              (uintptr_t)to,
@@ -165,7 +165,7 @@ void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
   if (from == to)
     return;
 
-  if (DEBUG or s->controls->messages or DEBUG_TRANSLATE)
+  if (DEBUG or s->globalState.controls->messages or DEBUG_TRANSLATE)
     fprintf (stderr,
              "[GC: Translating shared heap to "FMTPTR" of size %s bytes from "FMTPTR".] [%d]\n",
              (uintptr_t)to,
@@ -179,7 +179,7 @@ void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
   limit = to + size;
 
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
+    GC_state r = &s->globalState.procStates[proc];
     pointer end = r->heap->start + r->heap->oldGenSize;
     foreachObjptrInRange (s, r->heap->start, &end, translateObjptrShared, FALSE);
     if (r->frontier > end)

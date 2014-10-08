@@ -17,7 +17,7 @@ objptr getThreadCurrentObjptr (GC_state s) {
                (uintptr_t)p, (uintptr_t)newP, s->procId);
     GC_thread thrd = (GC_thread)p;
     GC_stack stk = (GC_stack)objptrToPointer (thrd->stack, s->heap->start);
-    if (stk->thread == pointerToObjptr (p, s->sharedHeap->start))
+    if (stk->thread == pointerToObjptr (p, s->globalState.sharedHeap->start))
       stk->thread = s->currentThread;
   }
   return s->currentThread;

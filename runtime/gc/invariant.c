@@ -17,8 +17,8 @@ void assertIsObjptrInFromSpaceOrLifted (GC_state s, objptr *opp) {
     op = *opp;
   }
 
-  assert (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
-  unless (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp))
+  assert (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->globalState.sharedHeap, *opp));
+  unless (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->globalState.sharedHeap, *opp))
     die ("gc.c: assertIsObjptrInFromSpaceOrLifted "
          "opp = "FMTPTR"  "
          "*opp = "FMTOBJPTR"\n",
@@ -60,7 +60,7 @@ bool invariantForGC (GC_state s) {
     if (layout->size > 0) {
       GC_frameOffsets offsets;
 
-      assert (layout->size <= s->maxFrameSize);
+      assert (layout->size <= s->globalState.maxFrameSize);
       offsets = layout->offsets;
     }
   }
@@ -108,8 +108,8 @@ bool invariantForGC (GC_state s) {
       fprintf (stderr, "Checking nursery(2). [%d]\n", s->procId);
   if (DEBUG)
     fprintf (stderr, "Checking sharedHeap(1). sharedStart = "FMTPTR" sharedFrontier = "FMTPTR" [%d]\n",
-              (uintptr_t)s->sharedStart, (uintptr_t)s->sharedFrontier, s->procId);
-  foreachObjptrInRange (s, s->sharedStart, &s->sharedFrontier, assertLiftedObjptr, FALSE);
+              (uintptr_t)s->sharedStart, (uintptr_t)s->globalState.sharedFrontier, s->procId);
+  foreachObjptrInRange (s, s->sharedStart, &s->globalState.sharedFrontier, assertLiftedObjptr, FALSE);
   if (DEBUG)
     fprintf (stderr, "Checking sharedHeap(2). [%d]\n", s->procId);
  /* Current thread. */

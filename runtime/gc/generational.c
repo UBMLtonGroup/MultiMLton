@@ -65,7 +65,7 @@ bool isCardMarked (GC_state s, pointer p) {
 void markCard (GC_state s, pointer p) {
   if (DEBUG_CARD_MARKING)
     fprintf (stderr, "markCard ("FMTPTR")\n", (uintptr_t)p);
-  if (s->mutatorMarksCards && !isPointerInHeap (s, s->sharedHeap, p))
+  if (s->mutatorMarksCards && !isPointerInHeap (s, s->globalState.sharedHeap, p))
     *(pointerToCardMapAddr (s, p)) = 0x1;
 }
 

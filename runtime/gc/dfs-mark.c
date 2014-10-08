@@ -80,7 +80,7 @@ size_t dfsMarkByMode (GC_state s, pointer root,
     root = objptrToPointer (op, s->heap->start);
   }
 
-  if (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, root)) {
+  if (ignoreSharedHeap and isPointerInHeap (s, s->globalState.sharedHeap, root)) {
       /* Object resides in the shared heap. Do not collect */
       if (DEBUG_LWTGC)
           fprintf (stderr, "dfsMarkByMode p = "FMTPTR"already LIFTED\n", (uintptr_t)root);
@@ -145,7 +145,7 @@ mark:
   splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   if (NORMAL_TAG == tag) {
     if ((not sizeEstimationForLifting) ||
-        (not isPointerInHeap (s, s->sharedHeap, cur))) {
+        (not isPointerInHeap (s, s->globalState.sharedHeap, cur))) {
       size += GC_NORMAL_HEADER_SIZE + bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
     }
     if (not toContinue)
@@ -166,7 +166,7 @@ markInNormal:
     // next = *(pointer*)todo;
     next = fetchObjptrToPointer (s, todo, s->heap->start);
     if ((not isPointer (next)) or
-        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next))) {
+        (ignoreSharedHeap and isPointerInHeap (s, s->globalState.sharedHeap, next))) {
 markNextInNormal:
       assert (objptrIndex < numObjptrs);
       objptrIndex++;
@@ -217,7 +217,7 @@ markNextInNormal:
      */
 
     if ((not sizeEstimationForLifting) ||
-        (not isPointerInHeap (s, s->sharedHeap, cur))) {
+        (not isPointerInHeap (s, s->globalState.sharedHeap, cur))) {
       size += GC_ARRAY_HEADER_SIZE +
         sizeofArrayNoHeader (s, getArrayLength (cur), bytesNonObjptrs, numObjptrs);
     }
@@ -248,7 +248,7 @@ markInArray:
     // next = *(pointer*)todo;
     next = fetchObjptrToPointer (s, todo, s->heap->start);
     if ((not isPointer (next)) or
-        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next))) {
+        (ignoreSharedHeap and isPointerInHeap (s, s->globalState.sharedHeap, next))) {
 markNextInArray:
       assert (arrayIndex < getArrayLength (cur));
       assert (objptrIndex < numObjptrs);
@@ -280,7 +280,7 @@ markNextInArray:
     assert (STACK_TAG == tag);
 
     if ((not sizeEstimationForLifting) ||
-        ((not isPointerInHeap (s, s->sharedHeap, cur))
+        ((not isPointerInHeap (s, s->globalState.sharedHeap, cur))
          && ((GC_stack)cur)->isParasitic)) {
       size += GC_STACK_HEADER_SIZE +
         sizeof (struct GC_stack) + ((GC_stack)cur)->reserved;
@@ -322,7 +322,7 @@ markInFrame:
                frameOffsets [objptrIndex + 1],
                (uintptr_t)todo, (uintptr_t)next);
     if ((not isPointer (next)) or
-        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next)) or
+        (ignoreSharedHeap and isPointerInHeap (s, s->globalState.sharedHeap, next)) or
         (sizeEstimationForLifting and (not ((GC_stack)cur)->isParasitic))) {
       objptrIndex++;
       goto markInFrame;

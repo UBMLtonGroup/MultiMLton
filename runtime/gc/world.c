@@ -39,14 +39,14 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
     fprintf (stderr, "loadWorldFromFILE\n");
   until (readChar (f) == '\000');
   magic = readUint32 (f);
-  unless (s->magic == magic)
+  unless (s->globalState.magic == magic)
     die ("Invalid world: wrong magic number.");
   start = readPointer (f);
   s->heap->oldGenSize = readSize (f);
   sharedStart = readPointer (f);
-  s->sharedHeap->oldGenSize = readSize (f);
+  s->globalState.sharedHeap->oldGenSize = readSize (f);
   s->atomicState = readUint32 (f);
-  s->callFromCHandlerThread = readObjptr (f);
+  s->globalState.callFromCHandlerThread = readObjptr (f);
   s->currentThread = readObjptr (f);
   s->signalHandlerThread = readObjptr (f);
   s->savedClosure = readObjptr (f);
@@ -63,22 +63,22 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
 
   createHeap (s, s->heap, sizeofHeapDesired (s, s->heap->oldGenSize, 0, LOCAL_HEAP), s->heap->oldGenSize);
   setCardMapAndCrossMap (s);
-  if (s->sharedHeap->oldGenSize == 0) {
-    createHeap (s, s->sharedHeap, 1024, 1024);
+  if (s->globalState.sharedHeap->oldGenSize == 0) {
+    createHeap (s, s->globalState.sharedHeap, 1024, 1024);
   }
   else {
-    createHeap (s, s->sharedHeap, sizeofHeapDesired (s, s->sharedHeap->oldGenSize, 0, SHARED_HEAP),
-                s->sharedHeap->oldGenSize);
+    createHeap (s, s->globalState.sharedHeap, sizeofHeapDesired (s, s->globalState.sharedHeap->oldGenSize, 0, SHARED_HEAP),
+                s->globalState.sharedHeap->oldGenSize);
   }
   fread_safe (s->heap->start, 1, s->heap->oldGenSize, f);
-  if ((*(s->loadGlobals)) (f) != 0) diee("couldn't load globals");
+  if ((*(s->globalState.loadGlobals)) (f) != 0) diee("couldn't load globals");
   // unless (EOF == fgetc (file))
   //  die ("Invalid world: junk at end of file.");
   /* translateHeap must occur after loading the heap and globals,
    * since it changes pointers in all of them.
    */
   translateHeap (s, start, s->heap->start, s->heap->oldGenSize);
-  translateSharedHeap (s, sharedStart, s->sharedHeap->start, s->sharedHeap->oldGenSize);
+  translateSharedHeap (s, sharedStart, s->globalState.sharedHeap->start, s->globalState.sharedHeap->oldGenSize);
   setGCStateCurrentLocalHeap (s, 0, 0);
   setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
   setGCStateCurrentThreadAndStack (s);
@@ -112,18 +112,18 @@ int saveWorldToFILE (GC_state s, FILE *f) {
   len = strlen(buf) + 1; /* +1 to get the '\000' */
 
   if (fwrite (buf, 1, len, f) != len) return -1;
-  if (fwrite (&s->magic, sizeof(uint32_t), 1, f) != 1) return -1;
+  if (fwrite (&s->globalState.magic, sizeof(uint32_t), 1, f) != 1) return -1;
   if (fwrite (&s->heap->start, sizeof(uintptr_t), 1, f) != 1) return -1;
   if (fwrite (&s->heap->oldGenSize, sizeof(size_t), 1, f) != 1) return -1;
-  if (fwrite (&s->sharedHeap->start, sizeof(uintptr_t), 1, f) != 1) return -1;
-  if (fwrite (&s->sharedHeap->oldGenSize, sizeof(size_t), 1, f) != 1) return -1;
+  if (fwrite (&s->globalState.sharedHeap->start, sizeof(uintptr_t), 1, f) != 1) return -1;
+  if (fwrite (&s->globalState.sharedHeap->oldGenSize, sizeof(size_t), 1, f) != 1) return -1;
 
   /* atomicState must be saved in the heap, because the saveWorld may
    * be run in the context of a critical section, which will expect to
    * be in the same context when it is restored.
    */
   if (fwrite (&s->atomicState, sizeof(uint32_t), 1, f) != 1) return -1;
-  if (fwrite (&s->callFromCHandlerThread, sizeof(objptr), 1, f) != 1) return -1;
+  if (fwrite (&s->globalState.callFromCHandlerThread, sizeof(objptr), 1, f) != 1) return -1;
   if (fwrite (&s->currentThread, sizeof(objptr), 1, f) != 1) return -1;
   if (fwrite (&s->signalHandlerThread, sizeof(objptr), 1, f) != 1) return -1;
   if (fwrite (&s->savedClosure, sizeof(objptr), 1, f) != 1) return -1;
@@ -149,7 +149,7 @@ int saveWorldToFILE (GC_state s, FILE *f) {
 
   if (fwrite (s->heap->start, 1, s->heap->oldGenSize, f) != s->heap->oldGenSize)
     return -1;
-  if (fwrite (s->sharedHeap->start, 1, s->sharedHeap->oldGenSize, f) != s->sharedHeap->oldGenSize)
+  if (fwrite (s->globalState.sharedHeap->start, 1, s->globalState.sharedHeap->oldGenSize, f) != s->globalState.sharedHeap->oldGenSize)
     return -1;
   if ((*(s->saveGlobals)) (f) != 0)
     return -1;

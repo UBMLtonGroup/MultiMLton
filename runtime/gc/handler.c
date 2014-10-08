@@ -55,7 +55,7 @@ void switchToSignalHandlerThreadIfNonAtomicAndSignalPending (GC_state s) {
    }
   if (s->atomicState == 1
       and s->signalsInfo.signalIsPending) {
-    GC_startSignalHandler (&s->procStates);
+    GC_startSignalHandler (&s->globalState.procStates);
     switchToThread (s, s->signalHandlerThread);
   }
 }
@@ -80,7 +80,7 @@ void GC_handler (GC_state s, int signum) {
    * limit to 0 if atomicState is 0
    */
    for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      GC_state gcState = &s->procStates[proc];
+      GC_state gcState = &s->globalState.procStates[proc];
       if (DEBUG_SIGNALS)
       {
         fprintf(stderr,"For processor %d\n",proc);

@@ -11,11 +11,11 @@ PATH := ../bin:$(shell echo $$PATH)
 TARGET := self
 
 ifeq ($(TARGET), self)
-CC := gcc -std=gnu99
+CC := gcc -s -w -std=gnu99
 AR := ar rc
 RANLIB := ranlib
 else
-CC := $(TARGET)-gcc -std=gnu99
+CC := $(TARGET)-gcc -s -w -std=gnu99
 AR := $(TARGET)-ar rc
 RANLIB := $(TARGET)-ranlib
 endif

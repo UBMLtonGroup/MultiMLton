@@ -307,7 +307,7 @@ void profileWrite (GC_state s, GC_profileData p, const char *fileName) {
   }
   writeString (f, kind);
   writeString (f, s->profiling.stack ? "stack\n" : "current\n");
-  writeUint32X (f, s->magic);
+  writeUint32X (f, s->globalState.magic);
   writeNewline (f);
   writeUintmaxU (f, p->total);
   writeString (f, " ");
@@ -372,7 +372,7 @@ void GC_handleSigProf (code_pointer pc) {
 
   /* XXX KC race condition between checking the amInGC flag and setting it on another processor */
   for (int proc = 0; proc < s->numberOfProcs; proc ++) {
-      if ((s->procStates[proc]).amInGC == TRUE) {
+      if ((s->globalState.procStates[proc]).amInGC == TRUE) {
           isSomeProcInGC = true;
           break;
       }
@@ -524,7 +524,7 @@ void GC_profileDone (__attribute__ ((unused)) GC_state *gs) {
   char fname[20];
   assert (s0->profiling.isOn);
   for (int proc = 0; proc < s0->numberOfProcs; proc ++) {
-    GC_state s = &(s0->procStates[proc]);
+    GC_state s = &(s0->globalState.procStates[proc]);
     if (DEBUG_PROFILE)
         fprintf (stderr, "GC_profileDone () [%d]\n",
                 Proc_processorNumber (s));

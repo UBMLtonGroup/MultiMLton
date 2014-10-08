@@ -87,7 +87,7 @@ int processAtMLton (GC_state s, int argc, char **argv,
   int i;
 
   i = 1;
-  while (s->controls->mayProcessAtMLton
+  while (s->globalState.controls->mayProcessAtMLton
          and i < argc
          and (0 == strcmp (argv [i], "@MLton"))) {
     bool done;
@@ -105,36 +105,36 @@ int processAtMLton (GC_state s, int argc, char **argv,
           i++;
           if (i == argc)
             die ("@MLton copy-generational-ratio missing argument.");
-          s->controls->ratios.copyGenerational = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.copyGenerational)
+          s->globalState.controls->ratios.copyGenerational = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.copyGenerational)
             die ("@MLton copy-generational-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "copy-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton copy-ratio missing argument.");
-          s->controls->ratios.copy = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.copy)
+          s->globalState.controls->ratios.copy = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.copy)
             die ("@MLton copy-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "fixed-heap")) {
           i++;
           if (i == argc)
             die ("@MLton fixed-heap missing argument.");
-          s->controls->fixedHeap = align (stringToBytes (argv[i++]),
+          s->globalState.controls->fixedHeap = align (stringToBytes (argv[i++]),
                                          2 * s->sysvals.pageSize);
         } else if (0 == strcmp (arg, "gc-messages")) {
           i++;
-          s->controls->messages = TRUE;
+          s->globalState.controls->messages = TRUE;
         } else if (0 == strcmp (arg, "ignore-id-for-cleanliness")) {
           i++;
-          s->controls->useIdentityForCleanliness = FALSE;
+          s->globalState.controls->useIdentityForCleanliness = FALSE;
         } else if (0 == strcmp (arg, "gc-summary")) {
           if (i == argc)
               die ("@MLton gc-summary missing argument");
           i++;
           if (0 == strcmp (argv[i], "cumulative"))
-              s->controls->summary = SUMMARY_CUMULATIVE;
+              s->globalState.controls->summary = SUMMARY_CUMULATIVE;
           else if (0 == strcmp (argv[i], "individual"))
-              s->controls->summary = SUMMARY_INDIVIDUAL;
+              s->globalState.controls->summary = SUMMARY_INDIVIDUAL;
           else
               die ("@MLton gc-summary invalid argument");
           i++;
@@ -142,55 +142,55 @@ int processAtMLton (GC_state s, int argc, char **argv,
           i++;
           if (i == argc)
             die ("@MLton alloc-chunk missing argument.");
-          s->controls->allocChunkSize = stringToBytes (argv[i++]);
-          unless (GC_HEAP_LIMIT_SLOP < s->controls->allocChunkSize)
+          s->globalState.controls->allocChunkSize = stringToBytes (argv[i++]);
+          unless (GC_HEAP_LIMIT_SLOP < s->globalState.controls->allocChunkSize)
             die ("@MLton alloc-chunk argument must be greater than slop.");
         } else if (0 == strcmp (arg, "affinity-base")) {
           i++;
           if (i == argc)
             die ("@MLton affinity-base missing argument.");
-          s->controls->affinityBase = stringToInt (argv[i++]);
+          s->globalState.controls->affinityBase = stringToInt (argv[i++]);
         } else if (0 == strcmp (arg, "affinity-stride")) {
           i++;
           if (i == argc)
             die ("@MLton affinity-stride missing argument.");
-          s->controls->affinityStride = stringToInt (argv[i++]);
+          s->globalState.controls->affinityStride = stringToInt (argv[i++]);
         } else if (0 == strcmp (arg, "restrict-available")) {
           i++;
-          s->controls->restrictAvailableSize = TRUE;
+          s->globalState.controls->restrictAvailableSize = TRUE;
           fprintf (stderr, "restrict-available has been disabled\n");
           exit (1);
         } else if (0 == strcmp (arg, "available-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton available-ratio missing argument.");
-          s->controls->ratios.available = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.available)
+          s->globalState.controls->ratios.available = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.available)
             die ("@MLton available-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "grow-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton grow-ratio missing argument.");
-          s->controls->ratios.grow = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.grow)
+          s->globalState.controls->ratios.grow = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.grow)
             die ("@MLton grow-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "hash-cons")) {
           i++;
           if (i == argc)
             die ("@MLton hash-cons missing argument.");
-          s->controls->ratios.hashCons = stringToFloat (argv[i++]);
-          unless (0.0 <= s->controls->ratios.hashCons
-                  and s->controls->ratios.hashCons <= 1.0)
+          s->globalState.controls->ratios.hashCons = stringToFloat (argv[i++]);
+          unless (0.0 <= s->globalState.controls->ratios.hashCons
+                  and s->globalState.controls->ratios.hashCons <= 1.0)
             die ("@MLton hash-cons argument must be between 0.0 and 1.0.");
         } else if (0 == strcmp (arg, "live-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton live-ratio missing argument.");
-          s->controls->ratios.live = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.live)
+          s->globalState.controls->ratios.live = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.live)
             die ("@MLton live-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "load-world")) {
-          unless (s->controls->mayLoadWorld)
+          unless (s->globalState.controls->mayLoadWorld)
             die ("May not load world.");
           i++;
           s->amOriginal = FALSE;
@@ -201,102 +201,102 @@ int processAtMLton (GC_state s, int argc, char **argv,
           i++;
           if (i == argc)
             die ("@MLton mark-compact-generational-ratio missing argument.");
-          s->controls->ratios.markCompactGenerational = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.markCompactGenerational)
+          s->globalState.controls->ratios.markCompactGenerational = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.markCompactGenerational)
             die ("@MLton mark-compact-generational-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "mark-compact-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton mark-compact-ratio missing argument.");
-          s->controls->ratios.markCompact = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.markCompact)
+          s->globalState.controls->ratios.markCompact = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.markCompact)
             die ("@MLton mark-compact-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "max-heap-local")) {
           i++;
           if (i == argc)
             die ("@MLton max-heap missing argument.");
-          s->controls->maxHeapLocal = align (stringToBytes (argv[i++]),
+          s->globalState.controls->maxHeapLocal = align (stringToBytes (argv[i++]),
                                        2 * s->sysvals.pageSize);
         } else if (0 == strcmp (arg, "max-heap-shared")) {
           i++;
           if (i == argc)
             die ("@MLton max-heap missing argument.");
-          s->controls->maxHeapShared = align (stringToBytes (argv[i++]),
+          s->globalState.controls->maxHeapShared = align (stringToBytes (argv[i++]),
                                        2 * s->sysvals.pageSize);
         } else if (0 == strcmp (arg, "may-page-heap")) {
           i++;
           if (i == argc)
             die ("@MLton may-page-heap missing argument.");
-          s->controls->mayPageHeap = stringToBool (argv[i++]);
+          s->globalState.controls->mayPageHeap = stringToBool (argv[i++]);
         } else if (0 == strcmp (arg, "reclaim-objects")) {
           i++;
           if (i == argc)
             die ("@MLton may-page-heap missing argument.");
-          s->controls->reclaimObjects = stringToBool (argv[i++]);
+          s->globalState.controls->reclaimObjects = stringToBool (argv[i++]);
         } else if (0 == strcmp (arg, "no-load-world")) {
           i++;
-          s->controls->mayLoadWorld = FALSE;
+          s->globalState.controls->mayLoadWorld = FALSE;
         } else if (0 == strcmp (arg, "nursery-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton nursery-ratio missing argument.");
-          s->controls->ratios.nursery = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.nursery)
+          s->globalState.controls->ratios.nursery = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.nursery)
             die ("@MLton nursery-ratio argument must be greater than 1.0.");
         } else if (0 == strcmp (arg, "ram-slop")) {
           i++;
           if (i == argc)
             die ("@MLton ram-slop missing argument.");
-          s->controls->ratios.ramSlop = stringToFloat (argv[i++]);
+          s->globalState.controls->ratios.ramSlop = stringToFloat (argv[i++]);
         } else if (0 == strcmp (arg, "show-sources")) {
           showSources (s);
           exit (0);
         } else if (0 == strcmp (arg, "stop")) {
           i++;
-          s->controls->mayProcessAtMLton = FALSE;
+          s->globalState.controls->mayProcessAtMLton = FALSE;
         } else if (0 == strcmp (arg, "stack-current-grow-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton stack-current-grow-ratio missing argument.");
-          s->controls->ratios.stackCurrentGrow = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.stackCurrentGrow)
+          s->globalState.controls->ratios.stackCurrentGrow = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.stackCurrentGrow)
             die ("@MLton stack-current-grow-ratio argument must greater than 1.0.");
         } else if (0 == strcmp (arg, "stack-current-max-reserved-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton stack-current-max-reserved-ratio missing argument.");
-          s->controls->ratios.stackCurrentMaxReserved = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.stackCurrentMaxReserved)
+          s->globalState.controls->ratios.stackCurrentMaxReserved = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.stackCurrentMaxReserved)
             die ("@MLton stack-current-max-reserved-ratio argument must greater than 1.0.");
         } else if (0 == strcmp (arg, "stack-current-permit-reserved-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton stack-current-permit-reserved-ratio missing argument.");
-          s->controls->ratios.stackCurrentPermitReserved = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.stackCurrentPermitReserved)
+          s->globalState.controls->ratios.stackCurrentPermitReserved = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.stackCurrentPermitReserved)
             die ("@MLton stack-current-permit-reserved-ratio argument must greater than 1.0.");
         } else if (0 == strcmp (arg, "stack-current-shrink-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton stack-current-shrink-ratio missing argument.");
-          s->controls->ratios.stackCurrentShrink = stringToFloat (argv[i++]);
-          unless (0.0 <= s->controls->ratios.stackCurrentShrink
-                  and s->controls->ratios.stackCurrentShrink <= 1.0)
+          s->globalState.controls->ratios.stackCurrentShrink = stringToFloat (argv[i++]);
+          unless (0.0 <= s->globalState.controls->ratios.stackCurrentShrink
+                  and s->globalState.controls->ratios.stackCurrentShrink <= 1.0)
             die ("@MLton stack-current-shrink-ratio argument must be between 0.0 and 1.0.");
         } else if (0 == strcmp (arg, "stack-max-reserved-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton stack-max-reserved-ratio missing argument.");
-          s->controls->ratios.stackMaxReserved = stringToFloat (argv[i++]);
-          unless (1.0 < s->controls->ratios.stackMaxReserved)
+          s->globalState.controls->ratios.stackMaxReserved = stringToFloat (argv[i++]);
+          unless (1.0 < s->globalState.controls->ratios.stackMaxReserved)
             die ("@MLton stack-max-reserved-ratio argument must greater than 1.0.");
         } else if (0 == strcmp (arg, "stack-shrink-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton stack-shrink-ratio missing argument.");
-          s->controls->ratios.stackShrink = stringToFloat (argv[i++]);
-          unless (0.0 <= s->controls->ratios.stackShrink
-                  and s->controls->ratios.stackShrink <= 1.0)
+          s->globalState.controls->ratios.stackShrink = stringToFloat (argv[i++]);
+          unless (0.0 <= s->globalState.controls->ratios.stackShrink
+                  and s->globalState.controls->ratios.stackShrink <= 1.0)
             die ("@MLton stack-shrink-ratio argument must be between 0.0 and 1.0.");
         } else if (0 == strcmp (arg, "use-mmap")) {
           i++;
@@ -309,7 +309,7 @@ int processAtMLton (GC_state s, int argc, char **argv,
             die ("@MLton number-processors incompatible with loaded worlds.");
           s->numberOfProcs = stringToFloat (argv[i++]) + s->numIOThreads;
           /* Turn off loaded worlds -- they are unsuppoed in multi-proc mode */
-          s->controls->mayLoadWorld = FALSE;
+          s->globalState.controls->mayLoadWorld = FALSE;
         } else if (0 == strcmp (arg, "io-threads")) {
           i++;
           if (i == argc)
@@ -436,40 +436,40 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->amInGC = TRUE;
   s->amOriginal = TRUE;
   s->atomicState = 0;
-  s->callFromCHandlerThread = BOGUS_OBJPTR;
-  s->controls = (struct GC_controls *) malloc (sizeof (struct GC_controls));
-  s->controls->fixedHeap = 0;
-  s->controls->maxHeapLocal = 0;
-  s->controls->maxHeapShared = 0;
-  s->controls->mayLoadWorld = TRUE;
-  s->controls->mayPageHeap = FALSE;
-  s->controls->mayProcessAtMLton = TRUE;
-  s->controls->messages = FALSE;
-  s->controls->oldGenArraySize = 0x100000;
-  s->controls->allocChunkSize = 4096;
-  s->controls->affinityBase = 0;
-  s->controls->affinityStride = 1;
-  s->controls->restrictAvailableSize = FALSE;
-  s->controls->ratios.copy = 4.0;
-  s->controls->ratios.copyGenerational = 4.0;
-  s->controls->ratios.grow = 8.0;
-  s->controls->ratios.hashCons = 0.0;
-  s->controls->ratios.live = 8.0;
-  s->controls->ratios.markCompact = 1.04;
-  s->controls->ratios.markCompactGenerational = 8.0;
-  s->controls->ratios.nursery = 10.0;
-  s->controls->ratios.ramSlop = 0.5;
-  s->controls->ratios.available = 1.1;
-  s->controls->ratios.stackCurrentGrow = 2.0;
-  s->controls->ratios.stackCurrentMaxReserved = 32.0;
-  s->controls->ratios.stackCurrentPermitReserved = 4.0;
-  s->controls->ratios.stackCurrentShrink = 0.5;
-  s->controls->ratios.stackMaxReserved = 8.0;
-  s->controls->ratios.stackShrink = 0.5;
-  s->selectiveDebug = FALSE;
-  s->controls->summary = SUMMARY_NONE;
-  s->controls->reclaimObjects = FALSE;
-  s->controls->useIdentityForCleanliness = TRUE;
+  s->globalState.callFromCHandlerThread = BOGUS_OBJPTR;
+  s->globalState.controls = (struct GC_controls *) malloc (sizeof (struct GC_controls));
+  s->globalState.controls->fixedHeap = 0;
+  s->globalState.controls->maxHeapLocal = 0;
+  s->globalState.controls->maxHeapShared = 0;
+  s->globalState.controls->mayLoadWorld = TRUE;
+  s->globalState.controls->mayPageHeap = FALSE;
+  s->globalState.controls->mayProcessAtMLton = TRUE;
+  s->globalState.controls->messages = FALSE;
+  s->globalState.controls->oldGenArraySize = 0x100000;
+  s->globalState.controls->allocChunkSize = 4096;
+  s->globalState.controls->affinityBase = 0;
+  s->globalState.controls->affinityStride = 1;
+  s->globalState.controls->restrictAvailableSize = FALSE;
+  s->globalState.controls->ratios.copy = 4.0;
+  s->globalState.controls->ratios.copyGenerational = 4.0;
+  s->globalState.controls->ratios.grow = 8.0;
+  s->globalState.controls->ratios.hashCons = 0.0;
+  s->globalState.controls->ratios.live = 8.0;
+  s->globalState.controls->ratios.markCompact = 1.04;
+  s->globalState.controls->ratios.markCompactGenerational = 8.0;
+  s->globalState.controls->ratios.nursery = 10.0;
+  s->globalState.controls->ratios.ramSlop = 0.5;
+  s->globalState.controls->ratios.available = 1.1;
+  s->globalState.controls->ratios.stackCurrentGrow = 2.0;
+  s->globalState.controls->ratios.stackCurrentMaxReserved = 32.0;
+  s->globalState.controls->ratios.stackCurrentPermitReserved = 4.0;
+  s->globalState.controls->ratios.stackCurrentShrink = 0.5;
+  s->globalState.controls->ratios.stackMaxReserved = 8.0;
+  s->globalState.controls->ratios.stackShrink = 0.5;
+  s->globalState.selectiveDebug = FALSE;
+  s->globalState.controls->summary = SUMMARY_NONE;
+  s->globalState.controls->reclaimObjects = FALSE;
+  s->globalState.controls->useIdentityForCleanliness = TRUE;
 
   s->forwardState.liftingObject = BOGUS_OBJPTR;
 
@@ -478,7 +478,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   assert (sizeofThread (s) == sizeofThread (s));
   assert (sizeofWeak (s) == sizeofWeak (s));
 
-  s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
+  s->globalState.cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
   s->currentThread = BOGUS_OBJPTR;
@@ -491,7 +491,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->enableTimer = FALSE;
   s->timeInterval = 200;
   s->copiedSize = -1;
-  s->procStates = NULL;
+  s->globalState.procStates = NULL;
   s->roots = NULL;
   s->rootsLength = 0;
   s->savedThread = BOGUS_OBJPTR;
@@ -499,12 +499,12 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->pacmlThreadId = BOGUS_OBJPTR;
   s->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->secondaryLocalHeap, LOCAL_HEAP);
-  s->sharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->sharedHeap, SHARED_HEAP);
-  s->sharedHeapStart = 0;
-  s->sharedHeapEnd = 0;
-  s->secondarySharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->secondarySharedHeap, SHARED_HEAP);
+  s->globalState.sharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (s, s->globalState.sharedHeap, SHARED_HEAP);
+  s->globalState.sharedHeapStart = 0;
+  s->globalState.sharedHeapEnd = 0;
+  s->globalState.secondarySharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (s, s->globalState.secondarySharedHeap, SHARED_HEAP);
   s->signalHandlerThread = BOGUS_OBJPTR;
   s->signalsInfo.amInSignalHandler = FALSE;
   s->signalsInfo.gcSignalHandled = FALSE;
@@ -558,15 +558,15 @@ int GC_init (GC_state s, int argc, char **argv) {
 
   unless (isAligned (s->sysvals.pageSize, CARD_SIZE))
     die ("Page size must be a multiple of card size.");
-  processAtMLton (s, s->atMLtonsLength, s->atMLtons, &s->worldFile);
+  processAtMLton (s, s->globalState.atMLtonsLength, s->globalState.atMLtons, &s->worldFile);
   res = processAtMLton (s, argc, argv, &s->worldFile);
-  if (s->controls->fixedHeap > 0 and s->controls->maxHeapLocal > 0)
+  if (s->globalState.controls->fixedHeap > 0 and s->globalState.controls->maxHeapLocal > 0)
     die ("Cannot use both fixed-heap and max-heap.");
-  unless (s->controls->ratios.markCompact <= s->controls->ratios.copy
-          and s->controls->ratios.copy <= s->controls->ratios.live)
+  unless (s->globalState.controls->ratios.markCompact <= s->globalState.controls->ratios.copy
+          and s->globalState.controls->ratios.copy <= s->globalState.controls->ratios.live)
     die ("Ratios must satisfy mark-compact-ratio <= copy-ratio <= live-ratio.");
-  unless (s->controls->ratios.stackCurrentPermitReserved
-          <= s->controls->ratios.stackCurrentMaxReserved)
+  unless (s->globalState.controls->ratios.stackCurrentPermitReserved
+          <= s->globalState.controls->ratios.stackCurrentMaxReserved)
     die ("Ratios must satisfy stack-current-permit-reserved <= stack-current-max-reserved.");
 
   Parallel_initResources (s);
@@ -576,11 +576,11 @@ int GC_init (GC_state s, int argc, char **argv) {
    * we didn't round, the size might be slightly off.
    */
   uintmax_t ram;
-  ram = alignMax ((uintmax_t)(s->controls->ratios.ramSlop * s->sysvals.physMem),
+  ram = alignMax ((uintmax_t)(s->globalState.controls->ratios.ramSlop * s->sysvals.physMem),
                   (uintmax_t)(s->sysvals.pageSize));
   ram = min (ram, (uintmax_t)SIZE_MAX);
   s->sysvals.ram = (size_t)ram;
-  if (DEBUG or DEBUG_RESIZING or s->controls->messages)
+  if (DEBUG or DEBUG_RESIZING or s->globalState.controls->messages)
     fprintf (stderr, "[GC: Found %s bytes of RAM; using %s bytes (%.1f%% of RAM).]\n",
              uintmaxToCommaString(s->sysvals.physMem),
              uintmaxToCommaString(s->sysvals.ram),
@@ -627,13 +627,13 @@ void GC_lateInit (GC_state s) {
 
 void GC_duplicate (GC_state d, GC_state s) {
   // GC_init
-  d->selectiveDebug = FALSE;
+  d->globalState.selectiveDebug = FALSE;
   d->amInGC = s->amInGC;
   d->amOriginal = s->amOriginal;
   d->atomicState = 0;
-  d->callFromCHandlerThread = BOGUS_OBJPTR;
-  d->controls = s->controls;
-  d->cumulativeStatistics = initCumulativeStatistics ();
+  d->globalState.callFromCHandlerThread = BOGUS_OBJPTR;
+  d->globalState.controls = s->globalState.controls;
+  d->globalState.cumulativeStatistics = initCumulativeStatistics ();
   d->forwardState.liftingObject = BOGUS_OBJPTR;
   d->lastMajorStatistics = initLastMajorStatistics ();
   d->lastSharedMajorStatistics = s->lastSharedMajorStatistics;
@@ -643,8 +643,8 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->numIOThreads = s->numIOThreads;
   d->enableTimer = s->enableTimer;
   d->timeInterval = s->timeInterval;
-  d->sharedHeapStart = s->sharedHeapStart;
-  d->sharedHeapEnd = s->sharedHeapEnd;
+  d->globalState.sharedHeapStart = s->globalState.sharedHeapStart;
+  d->globalState.sharedHeapEnd = s->globalState.sharedHeapEnd;
   d->roots = NULL;
   d->rootsLength = 0;
   d->savedThread = BOGUS_OBJPTR;
