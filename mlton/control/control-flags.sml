@@ -954,7 +954,11 @@ val profileVal = control {name = "profile val",
 val serialExec = control {name = "serial executable",
                           default = false,
                           toString = Bool.toString}
-
+                          
+val SingleCoreExecution = control {name = "SingleCoreExecution",
+                           default = " ",
+                           toString = fn s => s}
+                           
 val showBasis = control {name = "show basis",
                          default = NONE,
                          toString = Option.toString File.toString}

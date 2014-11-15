@@ -683,6 +683,13 @@ fun makeOptions {usage} =
        (Normal, "serial-exec", " {false|true}",
         "specialize the executable for serial execution (No parallel execution)",
         boolRef serialExec),
+        (Expert, "Single-Core", " {hello|dummy}", "Run program in single core",
+        SpaceString
+        (fn s => SingleCoreExecution:= (case s of 
+        							"hello" => "true"
+        							| "dummy" => "false"
+        							| _ => usage (concat ["invalid -Single-Core arg: ", s])))),
+        (*boolRef SingleCoreExecution),*)
        (Expert, "show", " {anns|path-map}", "print specified data and stop",
         SpaceString
         (fn s =>

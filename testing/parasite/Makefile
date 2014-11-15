@@ -1,7 +1,7 @@
 #!/bin/bash
 
-MULTIMLTON=$(HOME)/git/multiMLton/trunk/build/bin/mlton
-BASIS_DIR=$(HOME)/git/multiMLton/trunk/build/lib/sml/basis
+MULTIMLTON=../../build/bin/mlton
+BASIS_DIR=../../build/lib/sml/basis
 
 CORES=0-15
 TASKSET=taskset

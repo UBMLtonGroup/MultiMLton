@@ -101,7 +101,10 @@ int processAtMLton (GC_state s, int argc, char **argv,
         char *arg;
 
         arg = argv[i];
-        if (0 == strcmp (arg, "copy-generational-ratio")) {
+        if (0 == strcmp (arg, "Single_Heap")){
+        	printf ("restrict-available has been disabled\n");
+        	exit (1);
+        }else if (0 == strcmp (arg, "copy-generational-ratio")) {
           i++;
           if (i == argc)
             die ("@MLton copy-generational-ratio missing argument.");

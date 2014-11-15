@@ -54,7 +54,7 @@ signature CONTROL_FLAGS =
       val codegen: Codegen.t ref
 
       val contifyIntoMain: bool ref
-
+			
       (* Generate an executable with debugging info. *)
       val debug: bool ref
 
@@ -323,7 +323,10 @@ signature CONTROL_FLAGS =
       val stackRB : bool ref
 
       val serialExec : bool ref
-
+      
+			(*Vasanth Single Core Execution*)
+			val SingleCoreExecution: string ref
+			
       (* Show the basis library. *)
       val showBasis: File.t option ref
 
