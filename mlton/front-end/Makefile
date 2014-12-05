@@ -5,7 +5,6 @@
  # MLton is released under a BSD-style license.
  # See the file MLton-LICENSE for details.
  ##
-
 SRC := $(shell cd ../.. && pwd)
 BUILD := $(SRC)/build
 BIN := $(BUILD)/bin

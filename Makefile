@@ -5,7 +5,6 @@
  # MLton is released under a BSD-style license.
  # See the file MLton-LICENSE for details.
  ##
-
 export TARGET := self
 export TARGET_ARCH := $(shell bin/host-arch)
 export TARGET_OS := $(shell bin/host-os)
