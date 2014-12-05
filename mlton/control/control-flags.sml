@@ -956,8 +956,8 @@ val serialExec = control {name = "serial executable",
                           toString = Bool.toString}
                           
 val SingleCoreExecution = control {name = "SingleCoreExecution",
-                           default = " ",
-                           toString = fn s => s}
+                           default = false,
+                           toString = Bool.toString}
                            
 val showBasis = control {name = "show basis",
                          default = NONE,

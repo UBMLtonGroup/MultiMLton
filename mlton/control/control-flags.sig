@@ -325,7 +325,7 @@ signature CONTROL_FLAGS =
       val serialExec : bool ref
       
 			(*Vasanth Single Core Execution*)
-			val SingleCoreExecution: string ref
+			val SingleCoreExecution: bool ref
 			
       (* Show the basis library. *)
       val showBasis: File.t option ref
