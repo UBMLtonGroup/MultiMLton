@@ -32,6 +32,7 @@
 #define ExnStack *(size_t*)(GCState + ExnStackOffset)
 #define FrontierMem *(Pointer*)(GCState + FrontierOffset)
 #define Frontier frontier
+#define SharedFrontier *(Pointer*)(GCState + SharedFrontierOffset)
 #define StackBottom *(Pointer*)(GCState + StackBottomOffset)
 #define StackTopMem *(Pointer*)(GCState + StackTopOffset)
 #define StackTop stackTop

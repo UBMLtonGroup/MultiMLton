@@ -28,6 +28,8 @@ in
    structure Bits
    structure Bytes
    structure Control
+   (* Nate: lol haxor skillz *)
+   structure ControlFlags
    structure Pretty
    structure Region
    structure Source

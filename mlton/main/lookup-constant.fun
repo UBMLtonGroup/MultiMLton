@@ -56,6 +56,7 @@ val gcFields =
     "exnStack",
     "ffiOpArgsResPtr",
     "frontier",
+    "sharedFrontier",
     "generationalMaps.cardMapAbsolute",
     "globalObjptrNonRoot",
     "limit",

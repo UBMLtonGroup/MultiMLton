@@ -397,25 +397,43 @@ structure Statement =
             datatype z = datatype Operand.t
             fun bytes (b: Bytes.t): Operand.t =
                Word (WordX.fromIntInf (Bytes.toIntInf b, WordSize.csize ()))
+	    val allocateInSharedHeap = Vector.new3
+					   (* Nate: Copies the contents of the object to the frontier *)
+					   (Move {dst = Contents {oper = SharedFrontier,
+								  ty = Type.objptrHeader ()},
+						  src = Word (WordX.fromIntInf (Word.toIntInf header,
+										WordSize.objptrHeader ()))},
+					    (* CHECK; if objptr <> cpointer, need coercion here. *)
+					    (* Nate: Moves the frontier forward by the number of bytes in
+					     * the object header *)
+					    PrimApp {args = Vector.new2 (SharedFrontier,
+									 bytes (Runtime.headerSize ())),
+						     dst = SOME dst,
+						     prim = Prim.cpointerAdd},
+					    (* Nate: Moves the frontier forward by the number of bytes
+					     * the object's body requires *)
+					    PrimApp {args = Vector.new2 (SharedFrontier, bytes size),
+						     dst = SOME SharedFrontier,
+						     prim = Prim.cpointerAdd})
+	    val allocateInLocalHeap = Vector.new3
+					  (Move {dst = Contents {oper = Frontier,
+								 ty = Type.objptrHeader ()},
+						 src = Word (WordX.fromIntInf (Word.toIntInf header,
+									       WordSize.objptrHeader ()))},
+					   (* CHECK; if objptr <> cpointer, need coercion here. *)
+					   PrimApp {args = Vector.new2 (Frontier,
+									bytes (Runtime.headerSize ())),
+						    dst = SOME dst,
+						    prim = Prim.cpointerAdd},
+					   PrimApp {args = Vector.new2 (Frontier, bytes size),
+						    dst = SOME SharedFrontier,
+						    prim = Prim.cpointerAdd})
+
+
          in
-            Vector.new3
-		(* Nate: Copies the contents of the object to the frontier *)
-            (Move {dst = Contents {oper = SharedFrontier,
-                                   ty = Type.objptrHeader ()},
-                   src = Word (WordX.fromIntInf (Word.toIntInf header,
-                                                 WordSize.objptrHeader ()))},
-             (* CHECK; if objptr <> cpointer, need coercion here. *)
-	     (* Nate: Moves the frontier forward by the number of bytes in
-	      * the object header *)
-             PrimApp {args = Vector.new2 (SharedFrontier,
-                                          bytes (Runtime.headerSize ())),
-                      dst = SOME dst,
-                      prim = Prim.cpointerAdd},
-	     (* Nate: Moves the frontier forward by the number of bytes
-	      * the object's body requires *)
-             PrimApp {args = Vector.new2 (SharedFrontier, bytes size),
-                      dst = SOME SharedFrontier,
-                      prim = Prim.cpointerAdd})
+	     if ! ControlFlags.serialExec
+	     then allocateInSharedHeap
+	     else allocateInLocalHeap
          end
 
       fun foldOperands (s, ac, f) =

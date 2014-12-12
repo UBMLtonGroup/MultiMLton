@@ -324,6 +324,8 @@ signature CONTROL_FLAGS =
 
       val serialExec : bool ref
 
+      val singleCoreExec : bool ref
+
       (* Show the basis library. *)
       val showBasis: File.t option ref
 
